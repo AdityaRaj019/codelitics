@@ -12,10 +12,10 @@ export default function StatCard({
   color = "indigo",
 }: StatCardProps) {
   const colorClasses = {
-    indigo: "from-indigo-50 to-indigo-100 text-indigo-600 border-indigo-200",
-    emerald: "from-emerald-50 to-emerald-100 text-emerald-600 border-emerald-200",
-    purple: "from-purple-50 to-purple-100 text-purple-600 border-purple-200",
-    orange: "from-orange-50 to-orange-100 text-orange-600 border-orange-200",
+    indigo: "from-indigo-950 to-indigo-900 text-indigo-400 border-indigo-800",
+    emerald: "from-emerald-950 to-emerald-900 text-emerald-400 border-emerald-800",
+    purple: "from-purple-950 to-purple-900 text-purple-400 border-purple-800",
+    orange: "from-orange-950 to-orange-900 text-orange-400 border-orange-800",
   };
 
   const bgClass = colorClasses[color as keyof typeof colorClasses] || colorClasses.indigo;
@@ -26,7 +26,7 @@ export default function StatCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-gray-600 text-sm font-medium mb-1">{label}</p>
+          <p className="text-gray-400 text-sm font-medium mb-1">{label}</p>
           <p className="text-3xl font-bold">{value}</p>
         </div>
         <div className="text-4xl">{icon}</div>

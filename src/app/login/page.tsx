@@ -2,16 +2,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+        <div className="bg-zinc-900 rounded-2xl shadow-xl border border-gray-800 p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-3xl">🔐</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl font-bold text-gray-200 mb-2">
               Login to Continue
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-400">
               Sign in to track your DSA progress
             </p>
           </div>
@@ -19,7 +19,7 @@ export default function LoginPage() {
           {/* Login Buttons */}
           <div className="space-y-4">
             <button
-              className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-gray-300 rounded-xl px-6 py-4 font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:scale-105 transition-all shadow-sm"
+              className="w-full flex items-center justify-center space-x-3 bg-zinc-800 border-2 border-gray-700 rounded-xl px-6 py-4 font-semibold text-gray-200 hover:bg-zinc-700 hover:border-gray-600 hover:scale-105 transition-all shadow-sm"
               aria-label="Login with Google"
             >
               <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -44,7 +44,7 @@ export default function LoginPage() {
             </button>
 
             <button
-              className="w-full flex items-center justify-center space-x-3 bg-gray-900 border-2 border-gray-900 rounded-xl px-6 py-4 font-semibold text-white hover:bg-gray-800 hover:scale-105 transition-all shadow-sm"
+              className="w-full flex items-center justify-center space-x-3 bg-indigo-600 border-2 border-indigo-600 rounded-xl px-6 py-4 font-semibold text-white hover:bg-indigo-700 hover:scale-105 transition-all shadow-sm"
               aria-label="Login with GitHub"
             >
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -60,14 +60,14 @@ export default function LoginPage() {
 
           {/* Auth Coming Soon */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               🚀 Auth coming soon...
             </p>
           </div>
         </div>
 
         {/* Additional Info */}
-        <p className="text-center text-gray-600 text-sm mt-6">
+        <p className="text-center text-gray-400 text-sm mt-6">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
