@@ -1,12 +1,24 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  --font-inter: "Inter", sans-serif;
+  --font-inter: 'Inter', sans-serif;
 }
 
 /* Smooth transitions for theme changes */
 html {
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure dark mode works with next-themes */
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 /* Custom scrollbar for dark mode */
