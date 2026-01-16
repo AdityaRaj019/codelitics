@@ -1,35 +1,22 @@
-interface StatCardProps {
-  icon: string;
-  label: string;
-  value: number | string;
-  color?: string;
-}
+import { StatCardProps } from "@/types/global";
 
-export default function StatCard({
-  icon,
-  label,
-  value,
-  color = "indigo",
-}: StatCardProps) {
-  const colorClasses = {
-    indigo: "from-indigo-950 to-indigo-900 text-indigo-400 border-indigo-800",
-    emerald: "from-emerald-950 to-emerald-900 text-emerald-400 border-emerald-800",
-    purple: "from-purple-950 to-purple-900 text-purple-400 border-purple-800",
-    orange: "from-orange-950 to-orange-900 text-orange-400 border-orange-800",
-  };
-
-  const bgClass = colorClasses[color as keyof typeof colorClasses] || colorClasses.indigo;
-
+export default function StatCard({ icon, label, value, color }: StatCardProps) {
   return (
-    <div
-      className={`bg-gradient-to-br ${bgClass} rounded-xl p-6 border shadow-sm hover:shadow-md transition-all hover:scale-105`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-gray-400 text-sm font-medium mb-1">{label}</p>
-          <p className="text-3xl font-bold">{value}</p>
+    <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300 group">
+      <div className="flex items-center gap-4">
+        <div
+          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
+            color || "from-indigo-500 to-purple-500"
+          } flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}
+        >
+          {icon}
         </div>
-        <div className="text-4xl">{icon}</div>
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+            {value}
+          </p>
+        </div>
       </div>
     </div>
   );
