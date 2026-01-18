@@ -42,67 +42,19 @@ interface AuthState {
   getUserByEmail: (email: string) => AuthUser | undefined;
 }
 
-// Dummy users for testing
-const dummyUsers: AuthUser[] = [
+// Admin account only - regular users will register
+const defaultUsers: AuthUser[] = [
   {
     id: "admin-1",
     email: "admin@dsa.com",
     password: "admin123",
-    name: "Aditya Raj",
+    name: "Admin",
     role: "admin",
-    rating: 1850,
-    totalSolved: 187,
-    streak: 12,
-    lastActive: "2025-01-16",
-    joinedAt: "2024-06-15",
-  },
-  {
-    id: "user-1",
-    email: "user@dsa.com",
-    password: "user123",
-    name: "Priya Sharma",
-    role: "user",
-    rating: 1620,
-    totalSolved: 134,
-    streak: 7,
-    lastActive: "2025-01-15",
-    joinedAt: "2024-08-20",
-  },
-  {
-    id: "user-2",
-    email: "rahul@dsa.com",
-    password: "rahul123",
-    name: "Rahul Verma",
-    role: "user",
-    rating: 1950,
-    totalSolved: 256,
-    streak: 21,
-    lastActive: "2025-01-16",
-    joinedAt: "2024-03-10",
-  },
-  {
-    id: "user-3",
-    email: "sneha@dsa.com",
-    password: "sneha123",
-    name: "Sneha Patel",
-    role: "user",
-    rating: 1420,
-    totalSolved: 89,
-    streak: 3,
-    lastActive: "2025-01-14",
-    joinedAt: "2024-10-05",
-  },
-  {
-    id: "user-4",
-    email: "vikram@dsa.com",
-    password: "vikram123",
-    name: "Vikram Singh",
-    role: "user",
-    rating: 2100,
-    totalSolved: 312,
-    streak: 45,
-    lastActive: "2025-01-16",
-    joinedAt: "2024-01-20",
+    rating: 0,
+    totalSolved: 0,
+    streak: 0,
+    lastActive: new Date().toISOString().split("T")[0],
+    joinedAt: "2024-01-01",
   },
 ];
 
@@ -111,7 +63,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       currentUser: null,
       isAuthenticated: false,
-      registeredUsers: dummyUsers,
+      registeredUsers: defaultUsers,
 
       login: (email: string, password: string) => {
         const users = get().registeredUsers;
@@ -199,6 +151,19 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
+      version: 2, // Increment to trigger migration
+      migrate: (persistedState: unknown, version: number) => {
+        if (version < 2) {
+          // Clear old dummy users - only keep admin
+          return {
+            ...(persistedState as AuthState),
+            registeredUsers: defaultUsers,
+            currentUser: null,
+            isAuthenticated: false,
+          };
+        }
+        return persistedState as AuthState;
+      },
     }
   )
 );

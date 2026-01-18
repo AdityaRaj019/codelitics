@@ -89,13 +89,14 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Calculate overall stats
-  const users = registeredUsers;
+  // Filter out admin users - only show regular users
+  const users = registeredUsers.filter((u) => u.role !== "admin");
   const totalUsers = users.length;
   const totalProblemsSolved = users.reduce((sum, u) => sum + u.totalSolved, 0);
-  const avgRating = Math.round(
-    users.reduce((sum, u) => sum + u.rating, 0) / totalUsers
-  );
+  const avgRating =
+    totalUsers > 0
+      ? Math.round(users.reduce((sum, u) => sum + u.rating, 0) / totalUsers)
+      : 0;
   const activeToday = users.filter(
     (u) => u.lastActive === new Date().toISOString().split("T")[0]
   ).length;
@@ -199,94 +200,106 @@ export default function AdminDashboardPage() {
         <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
           <div className="p-4 bg-gray-100 dark:bg-zinc-950 border-b border-gray-200 dark:border-gray-800">
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-              All Users ({totalUsers})
+              Registered Users ({totalUsers})
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Click on a user to view details
+              {totalUsers > 0
+                ? "Click on a user to view details"
+                : "Users will appear here when they register"}
             </p>
           </div>
 
-          <div className="divide-y divide-gray-200 dark:divide-gray-800">
-            {users.map((user) => {
-              const activity = getActivityStatus(user.lastActive);
-              const ratingBadge = getRatingBadge(user.rating);
+          {totalUsers === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-20 h-20 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-10 h-10 text-gray-400" />
+              </div>
+              <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                No Users Yet
+              </h4>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                When users register on the platform, they will appear here. You
+                can monitor their progress, stats, and activity.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200 dark:divide-gray-800">
+              {users.map((user) => {
+                const activity = getActivityStatus(user.lastActive);
+                const ratingBadge = getRatingBadge(user.rating);
 
-              return (
-                <div
-                  key={user.id}
-                  onClick={() => setSelectedUser(user)}
-                  className="p-4 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {/* Avatar */}
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                        {user.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
+                return (
+                  <div
+                    key={user.id}
+                    onClick={() => setSelectedUser(user)}
+                    className="p-4 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {/* Avatar */}
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                          {user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+
+                        {/* User Info */}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-800 dark:text-gray-200">
+                              {user.name}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
 
-                      {/* User Info */}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-gray-800 dark:text-gray-200">
-                            {user.name}
-                          </h4>
-                          {user.role === "admin" && (
-                            <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs font-medium rounded-full border border-indigo-500/30">
-                              Admin
+                      <div className="flex items-center gap-6">
+                        {/* Stats */}
+                        <div className="hidden md:flex items-center gap-6">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Solved
+                            </p>
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">
+                              {user.totalSolved}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Streak
+                            </p>
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">
+                              🔥 {user.streak}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium border ${ratingBadge.color}`}
+                            >
+                              {ratingBadge.text}
                             </span>
-                          )}
+                          </div>
+                          <div className="text-center">
+                            <p
+                              className={`text-sm font-medium ${activity.color}`}
+                            >
+                              {activity.text}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-6">
-                      {/* Stats */}
-                      <div className="hidden md:flex items-center gap-6">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Solved
-                          </p>
-                          <p className="font-semibold text-gray-800 dark:text-gray-200">
-                            {user.totalSolved}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Streak
-                          </p>
-                          <p className="font-semibold text-gray-800 dark:text-gray-200">
-                            🔥 {user.streak}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium border ${ratingBadge.color}`}
-                          >
-                            {ratingBadge.text}
-                          </span>
-                        </div>
-                        <div className="text-center">
-                          <p
-                            className={`text-sm font-medium ${activity.color}`}
-                          >
-                            {activity.text}
-                          </p>
-                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                       </div>
-
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* User Detail Modal */}

@@ -1,57 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import UserCard from "@/components/UserCard";
+import Link from "next/link";
+import { useAuthStore, useProfileStore, useProblemStore } from "@/stores";
+import { Lock, RefreshCw } from "lucide-react";
+import ConnectLeetCode from "@/components/ConnectLeetCode";
+import LeetCodeStats from "@/components/LeetCodeStats";
+import RecentLeetCodeSubmissions from "@/components/RecentLeetCodeSubmissions";
 import StatCard from "@/components/StatCard";
 import AchievementCard from "@/components/AchievementCard";
-import RecentProblemsSolved from "@/components/RecentProblemsSolved";
-import { useProblemStore, useAuthStore } from "@/stores";
-import { RecentProblem } from "@/types/global";
-import { Lock } from "lucide-react";
-import Link from "next/link";
-
-// Mock stats data
-const mockStats = [
-  {
-    icon: "🔥",
-    label: "Current Streak",
-    value: 12,
-    color: "from-orange-500 to-red-500",
-  },
-  {
-    icon: "📊",
-    label: "Problems Today",
-    value: 3,
-    color: "from-blue-500 to-indigo-500",
-  },
-  {
-    icon: "⭐",
-    label: "Rating",
-    value: 1850,
-    color: "from-amber-500 to-yellow-500",
-  },
-  {
-    icon: "🎯",
-    label: "Accuracy",
-    value: "94%",
-    color: "from-green-500 to-emerald-500",
-  },
-];
-
-// Mock achievements data
-const mockAchievements = [
-  { id: 1, title: "First Blood", date: "Jan 5, 2025", icon: "🩸" },
-  { id: 2, title: "100 Problems Solved", date: "Dec 20, 2024", icon: "💯" },
-  { id: 3, title: "Week Warrior", date: "Dec 15, 2024", icon: "⚔️" },
-];
 
 export default function UserDashboardPage() {
-  const router = useRouter();
   const { currentUser, isAuthenticated } = useAuthStore();
+  const {
+    leetcode,
+    getTotalSolved,
+    getStreak,
+    getAcceptanceRate,
+    getRanking,
+    refreshLeetCode,
+    isLoading: profileLoading,
+  } = useProfileStore();
   const { problems } = useProblemStore();
-  const [recentProblems, setRecentProblems] = useState<RecentProblem[]>([]);
-  const [totalSolved, setTotalSolved] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -61,24 +31,6 @@ export default function UserDashboardPage() {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    const solved = problems.filter((p) => p.solved);
-    setTotalSolved(solved.length);
-
-    const recent: RecentProblem[] = solved
-      .filter((p) => p.solvedDate)
-      .slice(0, 5)
-      .map((p) => ({
-        id: p.id,
-        title: p.title,
-        category: p.category,
-        difficulty: p.difficulty,
-        solvedDate: p.solvedDate || "",
-        platform: p.platform,
-      }));
-    setRecentProblems(recent);
-  }, [problems]);
 
   // Show loading state during hydration
   if (isLoading) {
@@ -114,59 +66,132 @@ export default function UserDashboardPage() {
     );
   }
 
-  const displayName = currentUser.name;
-  const displayRating = currentUser.rating;
-  const displayTotalSolved = totalSolved || currentUser.totalSolved;
+  // Calculate dynamic stats
+  const isLeetCodeConnected = !!leetcode;
+  const totalSolved = isLeetCodeConnected ? getTotalSolved() : 0;
+  const streak = isLeetCodeConnected ? getStreak() : 0;
+  const acceptanceRate = isLeetCodeConnected ? getAcceptanceRate() : 0;
+  const ranking = isLeetCodeConnected ? getRanking() : 0;
 
-  // Dynamic stats based on user data
+  // Calculate problems from local tracker
+  const localSolvedCount = problems.filter((p) => p.solved).length;
+  const todaysSolved = problems.filter((p) => {
+    if (!p.solvedDate) return false;
+    const today = new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    return p.solvedDate === today;
+  }).length;
+
+  // Dynamic user stats
   const userStats = [
     {
       icon: "🔥",
       label: "Current Streak",
-      value: currentUser.streak,
+      value: streak,
       color: "from-orange-500 to-red-500",
     },
     {
       icon: "📊",
       label: "Problems Today",
-      value: 3,
+      value: todaysSolved,
       color: "from-blue-500 to-indigo-500",
     },
     {
       icon: "⭐",
-      label: "Rating",
-      value: currentUser.rating,
+      label: "Ranking",
+      value: ranking > 0 ? `#${ranking.toLocaleString()}` : "N/A",
       color: "from-amber-500 to-yellow-500",
     },
     {
       icon: "🎯",
-      label: "Accuracy",
-      value: "94%",
+      label: "Acceptance",
+      value: acceptanceRate > 0 ? `${acceptanceRate}%` : "N/A",
       color: "from-green-500 to-emerald-500",
     },
   ];
+
+  // Dynamic achievements based on actual data
+  const achievements = [];
+  if (totalSolved >= 1) {
+    achievements.push({
+      id: 1,
+      title: "First Blood",
+      date: "Solved your first problem!",
+      icon: "🩸",
+    });
+  }
+  if (totalSolved >= 50) {
+    achievements.push({
+      id: 2,
+      title: "50 Problems Solved",
+      date: "Half century!",
+      icon: "🎯",
+    });
+  }
+  if (totalSolved >= 100) {
+    achievements.push({
+      id: 3,
+      title: "Century",
+      date: "100 problems solved!",
+      icon: "💯",
+    });
+  }
+  if (streak >= 7) {
+    achievements.push({
+      id: 4,
+      title: "Week Warrior",
+      date: "7 day streak!",
+      icon: "⚔️",
+    });
+  }
+  if (streak >= 30) {
+    achievements.push({
+      id: 5,
+      title: "Month Master",
+      date: "30 day streak!",
+      icon: "🏆",
+    });
+  }
+
+  const displayName = leetcode?.userInfo?.name || currentUser?.name || "Coder";
+  const displayTotalSolved = totalSolved || localSolvedCount;
 
   return (
     <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-            Welcome back, {displayName}! 👋
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Here&apos;s your DSA progress overview
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+              Welcome back, {displayName}! 👋
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Here&apos;s your DSA progress overview
+            </p>
+          </div>
+          {isLeetCodeConnected && (
+            <button
+              onClick={() => refreshLeetCode()}
+              disabled={profileLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${profileLoading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          )}
         </div>
 
-        {/* User Card */}
-        <div className="mb-8">
-          <UserCard
-            name={displayName}
-            rating={displayRating}
-            totalSolved={displayTotalSolved}
-          />
-        </div>
+        {/* Connect LeetCode Section */}
+        {!isLeetCodeConnected && (
+          <div className="mb-8">
+            <ConnectLeetCode />
+          </div>
+        )}
 
         {/* Statistics Grid */}
         <div className="mb-8">
@@ -186,12 +211,30 @@ export default function UserDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Problems & Achievements */}
+        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          <div className="lg:col-span-2">
-            <RecentProblemsSolved problems={recentProblems} />
+          {/* LeetCode Stats & Recent Submissions */}
+          <div className="lg:col-span-2 space-y-6">
+            {isLeetCodeConnected ? (
+              <>
+                <LeetCodeStats />
+                <RecentLeetCodeSubmissions />
+              </>
+            ) : (
+              <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+                <div className="text-6xl mb-4">📊</div>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+                  Connect Your LeetCode
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                  Link your LeetCode account to see your complete stats,
+                  difficulty breakdown, and recent submissions here.
+                </p>
+              </div>
+            )}
           </div>
 
+          {/* Achievements Sidebar */}
           <div>
             <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
               <div className="p-4 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-b border-gray-200 dark:border-gray-800">
@@ -203,14 +246,50 @@ export default function UserDashboardPage() {
                 </p>
               </div>
               <div className="p-4 space-y-4">
-                {mockAchievements.map((achievement) => (
-                  <AchievementCard
-                    key={achievement.id}
-                    title={achievement.title}
-                    date={achievement.date}
-                    icon={achievement.icon}
-                  />
-                ))}
+                {achievements.length > 0 ? (
+                  achievements.map((achievement) => (
+                    <AchievementCard
+                      key={achievement.id}
+                      title={achievement.title}
+                      date={achievement.date}
+                      icon={achievement.icon}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div className="text-4xl mb-2">🎯</div>
+                    <p className="text-sm">
+                      {isLeetCodeConnected
+                        ? "Solve problems to unlock achievements!"
+                        : "Connect LeetCode to start earning achievements"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6 bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                Quick Actions
+              </h3>
+              <div className="space-y-2">
+                <Link
+                  href="/problems"
+                  className="block w-full text-left px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg hover:scale-[1.02] transition-all"
+                >
+                  ➕ Add New Problem
+                </Link>
+                {isLeetCodeConnected && (
+                  <a
+                    href={`https://leetcode.com/u/${leetcode.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-left px-4 py-3 bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    🔗 View LeetCode Profile
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -220,18 +299,34 @@ export default function UserDashboardPage() {
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
           <h2 className="text-3xl font-bold mb-4">Keep Going! 💪</h2>
           <p className="text-indigo-100 text-lg mb-6">
-            You&apos;ve solved {displayTotalSolved} problems so far. That&apos;s
-            amazing progress! Keep up the momentum.
+            You&apos;ve solved {displayTotalSolved} problems so far.
+            {displayTotalSolved > 0
+              ? " That's amazing progress! Keep up the momentum."
+              : " Start solving to track your progress!"}
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="bg-white/20 backdrop-blur-sm rounded-lg px-6 py-3">
               <span className="text-sm text-indigo-100">Next Milestone</span>
-              <p className="text-xl font-bold">250 Problems</p>
+              <p className="text-xl font-bold">
+                {displayTotalSolved < 50
+                  ? "50 Problems"
+                  : displayTotalSolved < 100
+                    ? "100 Problems"
+                    : displayTotalSolved < 250
+                      ? "250 Problems"
+                      : "500 Problems"}
+              </p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-lg px-6 py-3">
               <span className="text-sm text-indigo-100">Problems to go</span>
               <p className="text-xl font-bold">
-                {Math.max(0, 250 - displayTotalSolved)} more!
+                {displayTotalSolved < 50
+                  ? `${50 - displayTotalSolved} more!`
+                  : displayTotalSolved < 100
+                    ? `${100 - displayTotalSolved} more!`
+                    : displayTotalSolved < 250
+                      ? `${250 - displayTotalSolved} more!`
+                      : `${500 - displayTotalSolved} more!`}
               </p>
             </div>
           </div>

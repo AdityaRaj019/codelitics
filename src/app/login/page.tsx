@@ -148,16 +148,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Credentials */}
+          {/* Admin Credentials */}
           <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
             <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-3">
-              🧪 Demo Credentials
+              🔐 Admin Access
             </p>
-            <div className="space-y-2 text-sm">
+            <div className="text-sm">
               <div className="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded-lg">
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">
-                    Admin:
+                    Email:
                   </span>
                   <span className="ml-2 font-mono text-gray-800 dark:text-gray-200">
                     admin@dsa.com
@@ -167,20 +167,10 @@ export default function LoginPage() {
                   admin123
                 </span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded-lg">
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">
-                    User:
-                  </span>
-                  <span className="ml-2 font-mono text-gray-800 dark:text-gray-200">
-                    user@dsa.com
-                  </span>
-                </div>
-                <span className="font-mono text-gray-600 dark:text-gray-400">
-                  user123
-                </span>
-              </div>
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Regular users can create an account via the Register page.
+            </p>
           </div>
 
           {/* Register Link */}
