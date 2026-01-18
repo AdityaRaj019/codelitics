@@ -4,55 +4,67 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores";
-import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
-  const { login, isAuthenticated, currentUser } = useAuthStore();
+  const { register, isAuthenticated } = useAuthStore();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already logged in - must be in useEffect to avoid setState during render
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      if (currentUser.role === "admin") {
-        router.push("/dashboard/admin");
-      } else {
-        router.push("/dashboard/user");
-      }
+    if (isAuthenticated) {
+      router.push("/dashboard/user");
     }
-  }, [isAuthenticated, currentUser, router]);
+  }, [isAuthenticated, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setIsLoading(true);
 
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const result = login(email, password);
+    const result = register(email, password, name);
 
     if (result.success) {
-      const { currentUser } = useAuthStore.getState();
-      if (currentUser?.role === "admin") {
-        router.push("/dashboard/admin");
-      } else {
-        router.push("/dashboard/user");
-      }
+      router.push("/dashboard/user");
     } else {
-      setError(result.error || "Login failed");
+      setError(result.error || "Registration failed");
     }
 
     setIsLoading(false);
   };
 
-  // Show loading while checking auth or redirecting
-  if (isAuthenticated && currentUser) {
+  // Show loading while redirecting
+  if (isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
         <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
@@ -66,14 +78,14 @@ export default function LoginPage() {
         <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-3xl">🔐</span>
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white text-3xl">🚀</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-              Welcome Back
+              Create Account
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Sign in to track your DSA progress
+              Join DSA Tracker and start your journey
             </p>
           </div>
 
@@ -85,8 +97,25 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
+          {/* Register Form */}
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email Address
@@ -132,62 +161,55 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  Sign In
+                  Create Account
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Admin Credentials */}
-          <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-            <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-3">
-              🔐 Admin Access
-            </p>
-            <div className="text-sm">
-              <div className="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded-lg">
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">
-                    Email:
-                  </span>
-                  <span className="ml-2 font-mono text-gray-800 dark:text-gray-200">
-                    admin@dsa.com
-                  </span>
-                </div>
-                <span className="font-mono text-gray-600 dark:text-gray-400">
-                  admin123
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Regular users can create an account via the Register page.
-            </p>
-          </div>
-
-          {/* Register Link */}
+          {/* Login Link */}
           <p className="text-center text-gray-600 dark:text-gray-400 text-sm mt-6">
-            Don&apos;t have an account?{" "}
+            Already have an account?{" "}
             <Link
-              href="/register"
+              href="/login"
               className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
             >
-              Sign up
+              Sign in
             </Link>
           </p>
         </div>
 
         {/* Footer */}
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mt-6">
-          By signing in, you agree to our Terms of Service and Privacy Policy
+          By creating an account, you agree to our Terms of Service and Privacy
+          Policy
         </p>
       </div>
     </div>
