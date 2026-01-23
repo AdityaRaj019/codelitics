@@ -2,26 +2,27 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type PlatformType = "leetcode" | "codeforces" | "codechef";
 
-export interface IPlatformProfile extends Document {
+export interface IPlatformStats extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-
   platform: PlatformType;
   username: string;
 
-  // Cached stats from platform API
-  stats: {
-    totalSolved: number;
-    easySolved: number;
-    mediumSolved: number;
-    hardSolved: number;
-    totalEasy: number;
-    totalMedium: number;
-    totalHard: number;
-    ranking: number;
-    acceptanceRate: number;
-    contributionPoints: number;
-  };
+  // Stats
+  totalSolved: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  rating: number;
+
+  // Additional stats for display
+  totalEasy: number;
+  totalMedium: number;
+  totalHard: number;
+  ranking: number;
+  acceptanceRate: number;
+  contributionPoints: number;
+  streak: number;
 
   // User info from platform
   userInfo: {
@@ -46,12 +47,12 @@ export interface IPlatformProfile extends Document {
     lang: string;
   }[];
 
-  lastSynced: Date;
+  lastSyncedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const PlatformProfileSchema = new Schema<IPlatformProfile>(
+const PlatformStatsSchema = new Schema<IPlatformStats>(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -69,18 +70,21 @@ const PlatformProfileSchema = new Schema<IPlatformProfile>(
       trim: true,
     },
 
-    stats: {
-      totalSolved: { type: Number, default: 0 },
-      easySolved: { type: Number, default: 0 },
-      mediumSolved: { type: Number, default: 0 },
-      hardSolved: { type: Number, default: 0 },
-      totalEasy: { type: Number, default: 0 },
-      totalMedium: { type: Number, default: 0 },
-      totalHard: { type: Number, default: 0 },
-      ranking: { type: Number, default: 0 },
-      acceptanceRate: { type: Number, default: 0 },
-      contributionPoints: { type: Number, default: 0 },
-    },
+    // Stats
+    totalSolved: { type: Number, default: 0 },
+    easy: { type: Number, default: 0 },
+    medium: { type: Number, default: 0 },
+    hard: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 },
+
+    // Additional stats
+    totalEasy: { type: Number, default: 0 },
+    totalMedium: { type: Number, default: 0 },
+    totalHard: { type: Number, default: 0 },
+    ranking: { type: Number, default: 0 },
+    acceptanceRate: { type: Number, default: 0 },
+    contributionPoints: { type: Number, default: 0 },
+    streak: { type: Number, default: 0 },
 
     userInfo: {
       name: { type: String },
@@ -107,19 +111,19 @@ const PlatformProfileSchema = new Schema<IPlatformProfile>(
       },
     ],
 
-    lastSynced: { type: Date, default: Date.now },
+    lastSyncedAt: { type: Date, default: Date.now },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Unique constraint: one profile per platform per user
-PlatformProfileSchema.index({ userId: 1, platform: 1 }, { unique: true });
+PlatformStatsSchema.index({ userId: 1, platform: 1 }, { unique: true });
 
 // Prevent model recompilation in development
-const PlatformProfile: Model<IPlatformProfile> =
-  mongoose.models.PlatformProfile ||
-  mongoose.model<IPlatformProfile>("PlatformProfile", PlatformProfileSchema);
+const PlatformStats: Model<IPlatformStats> =
+  mongoose.models.PlatformStats ||
+  mongoose.model<IPlatformStats>("PlatformStats", PlatformStatsSchema);
 
-export default PlatformProfile;
+export default PlatformStats;

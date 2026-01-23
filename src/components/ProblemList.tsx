@@ -1,9 +1,10 @@
 "use client";
 
-import { useProblemStore } from "@/stores";
+import { useProblemStore, useAuthStore } from "@/stores";
 
 export default function ProblemList() {
   const { problems, toggleSolved } = useProblemStore();
+  const { currentUser } = useAuthStore();
 
   const categoryColors: Record<string, string> = {
     Array: "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400",
@@ -14,6 +15,15 @@ export default function ProblemList() {
     DP: "bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400",
     Graph: "bg-pink-100 dark:bg-pink-950 text-pink-600 dark:text-pink-400",
     Tree: "bg-teal-100 dark:bg-teal-950 text-teal-600 dark:text-teal-400",
+  };
+
+  const handleToggleSolved = async (problemId: string) => {
+    if (!currentUser?.id) return;
+    try {
+      await toggleSolved(currentUser.id, problemId);
+    } catch (error) {
+      console.error("Failed to toggle problem status:", error);
+    }
   };
 
   return (
@@ -45,7 +55,7 @@ export default function ProblemList() {
                 <input
                   type="checkbox"
                   checked={problem.solved}
-                  onChange={() => toggleSolved(problem.id)}
+                  onChange={() => handleToggleSolved(problem.id)}
                   className="w-5 h-5 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 cursor-pointer"
                   aria-label={`Mark ${problem.title} as ${
                     problem.solved ? "unsolved" : "solved"

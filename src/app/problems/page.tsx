@@ -1,34 +1,90 @@
 "use client";
 
-import { useState } from "react";
-import { useProblemStore } from "@/stores";
+import { useState, useEffect } from "react";
+import { useProblemStore, useAuthStore } from "@/stores";
+import Link from "next/link";
+import { Lock } from "lucide-react";
 
 export default function ProblemsPage() {
-  const { problems, addProblem, toggleSolved, deleteProblem } =
-    useProblemStore();
+  const {
+    problems,
+    addProblem,
+    toggleSolved,
+    deleteProblem,
+    fetchProblems,
+    isLoading,
+  } = useProblemStore();
+  const { currentUser, isAuthenticated } = useAuthStore();
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
   const [category, setCategory] = useState("Array");
   const [difficulty, setDifficulty] = useState("Easy");
   const [platform, setPlatform] = useState("LeetCode");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
-  const handleAddProblem = () => {
+  // Fetch problems on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch problems when user is available
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchProblems(currentUser.id);
+    }
+  }, [currentUser?.id, fetchProblems]);
+
+  const handleAddProblem = async () => {
     if (!title.trim() || !link.trim()) {
       alert("Please fill in both problem name and link");
       return;
     }
 
-    addProblem({
-      title: title.trim(),
-      link: link.trim(),
-      category,
-      difficulty,
-      platform,
-      solved: false,
-    });
+    if (!currentUser?.id) {
+      alert("Please login to add problems");
+      return;
+    }
 
-    setTitle("");
-    setLink("");
+    setIsSubmitting(true);
+    try {
+      await addProblem(currentUser.id, {
+        title: title.trim(),
+        url: link.trim(),
+        category,
+        difficulty,
+        platform,
+        status: "solved",
+      });
+
+      setTitle("");
+      setLink("");
+    } catch (error) {
+      console.error("Failed to add problem:", error);
+      alert("Failed to add problem. Please try again.");
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleToggleSolved = async (problemId: string) => {
+    if (!currentUser?.id) return;
+    try {
+      await toggleSolved(currentUser.id, problemId);
+    } catch (error) {
+      console.error("Failed to toggle problem:", error);
+    }
+  };
+
+  const handleDeleteProblem = async (problemId: string) => {
+    if (!currentUser?.id) return;
+    try {
+      await deleteProblem(currentUser.id, problemId);
+    } catch (error) {
+      console.error("Failed to delete problem:", error);
+    }
   };
 
   const categoryColors: Record<string, string> = {
@@ -54,6 +110,40 @@ export default function ProblemsPage() {
 
   const solvedCount = problems.filter((p) => p.solved).length;
   const unsolvedCount = problems.filter((p) => !p.solved).length;
+
+  // Show loading state during hydration
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated || !currentUser) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10 text-gray-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+            Login Required
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please sign in to track your problems.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+          >
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
@@ -157,9 +247,10 @@ export default function ProblemsPage() {
 
           <button
             onClick={handleAddProblem}
-            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all"
+            disabled={isSubmitting}
+            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Add Problem
+            {isSubmitting ? "Adding..." : "Add Problem"}
           </button>
         </div>
 
@@ -174,7 +265,14 @@ export default function ProblemsPage() {
             </p>
           </div>
 
-          {problems.length === 0 ? (
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+              <p className="text-gray-500 dark:text-gray-400 mt-4">
+                Loading problems...
+              </p>
+            </div>
+          ) : problems.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-6xl mb-4">📚</div>
               <p className="text-gray-600 dark:text-gray-400 text-lg">
@@ -195,7 +293,7 @@ export default function ProblemsPage() {
                     <input
                       type="checkbox"
                       checked={problem.solved}
-                      onChange={() => toggleSolved(problem.id)}
+                      onChange={() => handleToggleSolved(problem.id)}
                       className="w-5 h-5 mt-1 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 cursor-pointer"
                     />
 
@@ -203,7 +301,7 @@ export default function ProblemsPage() {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <a
-                            href={problem.link}
+                            href={problem.link || problem.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`font-semibold hover:text-indigo-500 transition-colors inline-flex items-center gap-2 ${
@@ -234,7 +332,7 @@ export default function ProblemsPage() {
                           )}
                         </div>
                         <button
-                          onClick={() => deleteProblem(problem.id)}
+                          onClick={() => handleDeleteProblem(problem.id)}
                           className="text-red-500 hover:text-red-400 transition-colors ml-4"
                           aria-label="Delete problem"
                         >

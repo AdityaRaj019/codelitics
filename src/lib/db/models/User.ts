@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type UserRole = "user" | "admin";
+export type AuthProvider = "credentials" | "google" | "github";
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -8,21 +9,8 @@ export interface IUser extends Document {
   email: string;
   password?: string; // Only for credentials auth (hashed)
   image?: string;
+  authProvider: AuthProvider;
   role: UserRole;
-
-  // Stats (can be synced from platforms)
-  totalSolved: number;
-  rating: number;
-  streak: number;
-
-  // Platform connections
-  leetcodeUsername?: string;
-  codeforcesUsername?: string;
-  codechefUsername?: string;
-
-  // Timestamps
-  emailVerified?: Date;
-  lastActive: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,29 +36,20 @@ const UserSchema = new Schema<IUser>(
     image: {
       type: String,
     },
+    authProvider: {
+      type: String,
+      enum: ["credentials", "google", "github"],
+      default: "credentials",
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
-
-    // Stats
-    totalSolved: { type: Number, default: 0 },
-    rating: { type: Number, default: 1000 },
-    streak: { type: Number, default: 0 },
-
-    // Platform usernames
-    leetcodeUsername: { type: String },
-    codeforcesUsername: { type: String },
-    codechefUsername: { type: String },
-
-    // Auth fields
-    emailVerified: { type: Date },
-    lastActive: { type: Date, default: Date.now },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt automatically
-  }
+  },
 );
 
 // Indexes for faster queries

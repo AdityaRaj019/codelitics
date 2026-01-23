@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuthStore, AuthUser } from "@/stores";
+import { useAuthStore } from "@/stores";
 import {
   ChevronRight,
   Users,
@@ -14,12 +13,25 @@ import {
   Shield,
 } from "lucide-react";
 
+// Placeholder user type for admin dashboard
+interface AdminUserView {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  totalSolved: number;
+  rating: number;
+  streak: number;
+  lastActive: string;
+  joinedAt: string;
+}
+
 export default function AdminDashboardPage() {
-  const router = useRouter();
-  const { currentUser, isAuthenticated, isAdmin, registeredUsers } =
-    useAuthStore();
-  const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
+  const { currentUser, isAuthenticated, isAdmin } = useAuthStore();
+  const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // TODO: Fetch users from backend API
+  const [users] = useState<AdminUserView[]>([]);
 
   useEffect(() => {
     // Small delay to allow hydration
@@ -89,8 +101,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Filter out admin users - only show regular users
-  const users = registeredUsers.filter((u) => u.role !== "admin");
+  // Calculate stats from users array
   const totalUsers = users.length;
   const totalProblemsSolved = users.reduce((sum, u) => sum + u.totalSolved, 0);
   const avgRating =
@@ -98,7 +109,7 @@ export default function AdminDashboardPage() {
       ? Math.round(users.reduce((sum, u) => sum + u.rating, 0) / totalUsers)
       : 0;
   const activeToday = users.filter(
-    (u) => u.lastActive === new Date().toISOString().split("T")[0]
+    (u) => u.lastActive === new Date().toISOString().split("T")[0],
   ).length;
 
   const getActivityStatus = (lastActive: string) => {
@@ -438,7 +449,7 @@ export default function AdminDashboardPage() {
                         style={{
                           width: `${Math.min(
                             (selectedUser.totalSolved / 500) * 100,
-                            100
+                            100,
                           )}%`,
                         }}
                       />

@@ -49,15 +49,16 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const result = await register(email, password, name);
 
-    const result = register(email, password, name);
-
-    if (result.success) {
-      router.push("/dashboard/user");
-    } else {
-      setError(result.error || "Registration failed");
+      if (result.success) {
+        router.push("/dashboard/user");
+      } else {
+        setError(result.error || "Registration failed");
+      }
+    } catch {
+      setError("An unexpected error occurred");
     }
 
     setIsLoading(false);
