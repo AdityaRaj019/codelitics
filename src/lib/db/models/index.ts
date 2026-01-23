@@ -1,5 +1,17 @@
-// Database Models
-export { default as User, type IUser, type UserRole } from "./User";
+// Database Models - Following the schema structure:
+// users, platformStats, problems, userProblemProgress
+
+export {
+  default as User,
+  type IUser,
+  type UserRole,
+  type AuthProvider,
+} from "./User";
+export {
+  default as PlatformStats,
+  type IPlatformStats,
+  type PlatformType,
+} from "./PlatformStats";
 export {
   default as Problem,
   type IProblem,
@@ -7,7 +19,7 @@ export {
   type Platform,
 } from "./Problem";
 export {
-  default as PlatformProfile,
-  type IPlatformProfile,
-  type PlatformType,
-} from "./PlatformProfile";
+  default as UserProblemProgress,
+  type IUserProblemProgress,
+  type ProblemStatus,
+} from "./UserProblemProgress";

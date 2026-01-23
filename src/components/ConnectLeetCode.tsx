@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useProfileStore } from "@/stores";
+import { useProfileStore, useAuthStore } from "@/stores";
 import { Link2, Loader2, CheckCircle, AlertCircle, X } from "lucide-react";
 
 interface ConnectPlatformProps {
@@ -15,16 +15,17 @@ export default function ConnectLeetCode({
 }: ConnectPlatformProps) {
   const { connectLeetCode, leetcode, isLoading, error, clearError } =
     useProfileStore();
+  const { currentUser } = useAuthStore();
   const [input, setInput] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!input.trim()) return;
+    if (!input.trim() || !currentUser?.id) return;
 
     try {
-      await connectLeetCode(input.trim());
+      await connectLeetCode(currentUser.id, input.trim());
       setInput("");
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -94,8 +95,8 @@ export default function ConnectLeetCode({
               <span>Connected as {leetcode.username}</span>
             </div>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {leetcode.lastFetched
-                ? `Last synced: ${new Date(leetcode.lastFetched).toLocaleString()}`
+              {leetcode.lastSyncedAt
+                ? `Last synced: ${new Date(leetcode.lastSyncedAt).toLocaleString()}`
                 : ""}
             </span>
           </div>
@@ -117,7 +118,7 @@ export default function ConnectLeetCode({
         </div>
         <button
           type="submit"
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !input.trim() || !currentUser}
           className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
         >
           {isLoading ? (

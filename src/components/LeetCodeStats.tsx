@@ -1,6 +1,6 @@
 "use client";
 
-import { useProfileStore } from "@/stores";
+import { useProfileStore, useAuthStore } from "@/stores";
 
 interface DifficultyProgressProps {
   label: string;
@@ -53,6 +53,7 @@ export default function LeetCodeStats() {
     getUserDisplayInfo,
     refreshLeetCode,
   } = useProfileStore();
+  const { currentUser } = useAuthStore();
 
   if (!leetcode) {
     return null;
@@ -64,6 +65,15 @@ export default function LeetCodeStats() {
   const streak = getStreak();
   const acceptanceRate = getAcceptanceRate();
   const ranking = getRanking();
+
+  const handleRefresh = async () => {
+    if (!currentUser?.id) return;
+    try {
+      await refreshLeetCode(currentUser.id);
+    } catch (error) {
+      console.error("Failed to refresh LeetCode data:", error);
+    }
+  };
 
   return (
     <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -92,7 +102,7 @@ export default function LeetCodeStats() {
             </div>
           </div>
           <button
-            onClick={() => refreshLeetCode()}
+            onClick={handleRefresh}
             disabled={isLoading}
             className="p-2 hover:bg-white/50 dark:hover:bg-black/30 rounded-lg transition-colors disabled:opacity-50"
             title="Refresh data"
@@ -193,9 +203,9 @@ export default function LeetCodeStats() {
         )}
 
         {/* Last synced */}
-        {leetcode.lastFetched && (
+        {leetcode.lastSyncedAt && (
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
-            Last synced: {new Date(leetcode.lastFetched).toLocaleString()}
+            Last synced: {new Date(leetcode.lastSyncedAt).toLocaleString()}
           </p>
         )}
       </div>

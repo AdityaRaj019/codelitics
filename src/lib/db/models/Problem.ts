@@ -11,55 +11,22 @@ export type Platform =
 
 export interface IProblem extends Document {
   _id: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId; // Reference to User
-
-  title: string;
-  link: string;
-  category: string;
-  difficulty: Difficulty;
   platform: Platform;
-
-  solved: boolean;
-  solvedDate?: Date;
-  notes?: string;
+  title: string;
+  difficulty: Difficulty;
+  category: string;
+  url: string;
   tags?: string[];
-
-  // For custom lists
-  listId?: mongoose.Types.ObjectId;
-
-  // Timestamps
   createdAt: Date;
   updatedAt: Date;
 }
 
 const ProblemSchema = new Schema<IProblem>(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "User ID is required"],
-      index: true,
-    },
-
     title: {
       type: String,
       required: [true, "Problem title is required"],
       trim: true,
-    },
-    link: {
-      type: String,
-      required: [true, "Problem link is required"],
-      trim: true,
-    },
-    category: {
-      type: String,
-      required: [true, "Category is required"],
-      trim: true,
-    },
-    difficulty: {
-      type: String,
-      enum: ["Easy", "Medium", "Hard"],
-      required: [true, "Difficulty is required"],
     },
     platform: {
       type: String,
@@ -72,28 +39,35 @@ const ProblemSchema = new Schema<IProblem>(
         "Other",
       ],
       default: "LeetCode",
+      required: [true, "Platform is required"],
     },
-
-    solved: { type: Boolean, default: false },
-    solvedDate: { type: Date },
-    notes: { type: String },
+    difficulty: {
+      type: String,
+      enum: ["Easy", "Medium", "Hard"],
+      required: [true, "Difficulty is required"],
+    },
+    category: {
+      type: String,
+      required: [true, "Category is required"],
+      trim: true,
+    },
+    url: {
+      type: String,
+      required: [true, "Problem URL is required"],
+      trim: true,
+    },
     tags: [{ type: String }],
-
-    listId: {
-      type: Schema.Types.ObjectId,
-      ref: "ProblemList",
-    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-// Compound indexes for common queries
-ProblemSchema.index({ userId: 1, createdAt: -1 });
-ProblemSchema.index({ userId: 1, solved: 1 });
-ProblemSchema.index({ userId: 1, difficulty: 1 });
-ProblemSchema.index({ userId: 1, category: 1 });
+// Indexes for common queries
+ProblemSchema.index({ platform: 1 });
+ProblemSchema.index({ difficulty: 1 });
+ProblemSchema.index({ category: 1 });
+ProblemSchema.index({ title: 1, platform: 1 }, { unique: true });
 
 // Prevent model recompilation in development
 const Problem: Model<IProblem> =

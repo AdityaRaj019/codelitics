@@ -2,168 +2,191 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type UserRole = "user" | "admin";
+export type AuthProvider = "credentials" | "google" | "github";
 
 export interface AuthUser {
   id: string;
   email: string;
-  password: string; // In real app, this would be hashed
   name: string;
+  image?: string;
+  authProvider: AuthProvider;
   role: UserRole;
-  rating: number;
-  totalSolved: number;
-  streak: number;
-  lastActive: string;
-  joinedAt: string;
+  createdAt: string;
 }
 
 interface AuthState {
   // Current logged in user (null if not logged in)
   currentUser: AuthUser | null;
   isAuthenticated: boolean;
-
-  // Database of all users (stored in localStorage for demo)
-  registeredUsers: AuthUser[];
+  isLoading: boolean;
+  error: string | null;
 
   // Auth actions
   login: (
     email: string,
-    password: string
-  ) => { success: boolean; error?: string };
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (
     email: string,
     password: string,
     name: string,
-    role?: UserRole
-  ) => { success: boolean; error?: string };
+    role?: UserRole,
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  // Session management
+  refreshUser: () => Promise<void>;
+  setUser: (user: AuthUser | null) => void;
+  clearError: () => void;
 
   // Helpers
   isAdmin: () => boolean;
-  getUserByEmail: (email: string) => AuthUser | undefined;
 }
-
-// Admin account only - regular users will register
-const defaultUsers: AuthUser[] = [
-  {
-    id: "admin-1",
-    email: "admin@dsa.com",
-    password: "admin123",
-    name: "Admin",
-    role: "admin",
-    rating: 0,
-    totalSolved: 0,
-    streak: 0,
-    lastActive: new Date().toISOString().split("T")[0],
-    joinedAt: "2024-01-01",
-  },
-];
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       currentUser: null,
       isAuthenticated: false,
-      registeredUsers: defaultUsers,
+      isLoading: false,
+      error: null,
 
-      login: (email: string, password: string) => {
-        const users = get().registeredUsers;
-        const user = users.find(
-          (u) => u.email.toLowerCase() === email.toLowerCase()
-        );
+      login: async (email: string, password: string) => {
+        set({ isLoading: true, error: null });
 
-        if (!user) {
-          return { success: false, error: "User not found" };
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (!data.success) {
+            set({ isLoading: false, error: data.error });
+            return { success: false, error: data.error };
+          }
+
+          // Store user in state
+          set({
+            currentUser: data.user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+
+          return { success: true };
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error ? error.message : "Login failed";
+          set({ isLoading: false, error: errorMsg });
+          return { success: false, error: errorMsg };
         }
-
-        if (user.password !== password) {
-          return { success: false, error: "Invalid password" };
-        }
-
-        // Update last active
-        const updatedUser = {
-          ...user,
-          lastActive: new Date().toISOString().split("T")[0],
-        };
-
-        set({
-          currentUser: updatedUser,
-          isAuthenticated: true,
-          registeredUsers: users.map((u) =>
-            u.id === user.id ? updatedUser : u
-          ),
-        });
-
-        return { success: true };
       },
 
       logout: () => {
         set({
           currentUser: null,
           isAuthenticated: false,
+          error: null,
         });
       },
 
-      register: (
+      register: async (
         email: string,
         password: string,
         name: string,
-        role: UserRole = "user"
+        role: UserRole = "user",
       ) => {
-        const users = get().registeredUsers;
+        set({ isLoading: true, error: null });
 
-        // Check if email already exists
-        if (users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
-          return { success: false, error: "Email already registered" };
+        try {
+          const response = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, name, role }),
+          });
+
+          const data = await response.json();
+
+          if (!data.success) {
+            set({ isLoading: false, error: data.error });
+            return { success: false, error: data.error };
+          }
+
+          // Auto-login after registration
+          set({
+            currentUser: data.user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+
+          return { success: true };
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error ? error.message : "Registration failed";
+          set({ isLoading: false, error: errorMsg });
+          return { success: false, error: errorMsg };
         }
+      },
 
-        const newUser: AuthUser = {
-          id: `user-${Date.now()}`,
-          email,
-          password,
-          name,
-          role,
-          rating: 1000,
-          totalSolved: 0,
-          streak: 0,
-          lastActive: new Date().toISOString().split("T")[0],
-          joinedAt: new Date().toISOString().split("T")[0],
-        };
+      refreshUser: async () => {
+        const { currentUser } = get();
+        if (!currentUser?.id) return;
 
+        try {
+          const response = await fetch(`/api/auth/me?userId=${currentUser.id}`);
+          const data = await response.json();
+
+          if (data.success) {
+            set({ currentUser: data.user, isAuthenticated: true });
+          } else {
+            // User not found in database, clear session
+            set({ currentUser: null, isAuthenticated: false });
+          }
+        } catch (error) {
+          console.error("Failed to refresh user:", error);
+        }
+      },
+
+      setUser: (user: AuthUser | null) => {
         set({
-          registeredUsers: [...users, newUser],
-          currentUser: newUser,
-          isAuthenticated: true,
+          currentUser: user,
+          isAuthenticated: !!user,
         });
+      },
 
-        return { success: true };
+      clearError: () => {
+        set({ error: null });
       },
 
       isAdmin: () => {
         const user = get().currentUser;
         return user?.role === "admin";
       },
-
-      getUserByEmail: (email: string) => {
-        return get().registeredUsers.find(
-          (u) => u.email.toLowerCase() === email.toLowerCase()
-        );
-      },
     }),
     {
       name: "auth-storage",
-      version: 2, // Increment to trigger migration
+      version: 3, // Increment to trigger migration from old schema
       migrate: (persistedState: unknown, version: number) => {
-        if (version < 2) {
-          // Clear old dummy users - only keep admin
+        if (version < 3) {
+          // Clear old local-only auth data
           return {
-            ...(persistedState as AuthState),
-            registeredUsers: defaultUsers,
             currentUser: null,
             isAuthenticated: false,
+            isLoading: false,
+            error: null,
           };
         }
         return persistedState as AuthState;
       },
-    }
-  )
+      // Only persist these fields
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    },
+  ),
 );

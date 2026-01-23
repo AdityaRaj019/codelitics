@@ -32,20 +32,21 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const result = await login(email, password);
 
-    const result = login(email, password);
-
-    if (result.success) {
-      const { currentUser } = useAuthStore.getState();
-      if (currentUser?.role === "admin") {
-        router.push("/dashboard/admin");
+      if (result.success) {
+        const { currentUser } = useAuthStore.getState();
+        if (currentUser?.role === "admin") {
+          router.push("/dashboard/admin");
+        } else {
+          router.push("/dashboard/user");
+        }
       } else {
-        router.push("/dashboard/user");
+        setError(result.error || "Login failed");
       }
-    } else {
-      setError(result.error || "Login failed");
+    } catch {
+      setError("An unexpected error occurred");
     }
 
     setIsLoading(false);
