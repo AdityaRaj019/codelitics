@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useProfileStore, useAuthStore } from "@/stores";
 
 interface DifficultyProgressProps {
@@ -82,10 +83,13 @@ export default function LeetCodeStats() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {userInfo?.avatar ? (
-              <img
+              <Image
                 src={userInfo.avatar}
                 alt={userInfo.name}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-700"
+                unoptimized
               />
             ) : (
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
