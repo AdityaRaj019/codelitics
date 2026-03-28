@@ -7,6 +7,7 @@ import {
   User,
   LogOut,
   Home,
+  List,
   Code,
   LayoutDashboard,
   Menu,
@@ -66,6 +67,12 @@ export default function Header() {
                       <span>Problems</span>
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/problem-list" className="cursor-pointer">
+                      <List className="mr-2 h-4 w-4" />
+                      <span>Problem List</span>
+                    </Link>
+                  </DropdownMenuItem>
                   {/* Admin-only links */}
                   {isAuthenticated && isAdminUser && (
                     <>
@@ -108,22 +115,24 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-              <Link
-                href="/"
-                className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
-              >
-                Home
-              </Link>
-            </motion.div>
-            <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-              <Link
-                href="/problems"
-                className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
-              >
-                Problems
-              </Link>
-            </motion.div>
+            <Link
+              href="/"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+            >
+              Home
+            </Link>
+            <Link
+              href="/problems"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+            >
+              Problems
+            </Link>
+            <Link
+              href="/problem-list"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+            >
+              Problem List
+            </Link>
 
             {/* Admin-only navigation */}
             {isAuthenticated && isAdminUser && (
