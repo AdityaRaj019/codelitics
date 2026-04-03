@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   User,
   LogOut,
   Home,
+  List,
   Code,
   LayoutDashboard,
   Menu,
@@ -65,6 +67,12 @@ export default function Header() {
                       <span>Problems</span>
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/problem-list" className="cursor-pointer">
+                      <List className="mr-2 h-4 w-4" />
+                      <span>Problem List</span>
+                    </Link>
+                  </DropdownMenuItem>
                   {/* Admin-only links */}
                   {isAuthenticated && isAdminUser && (
                     <>
@@ -91,11 +99,15 @@ export default function Header() {
             </div>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <Link href="/" className="flex items-center space-x-2 group">
+              <motion.div
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.5 }}
+                className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center"
+              >
                 <span className="text-white font-bold text-lg">D</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              </motion.div>
+              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
                 DSA Tracker
               </span>
             </Link>
@@ -114,6 +126,12 @@ export default function Header() {
               className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
             >
               Problems
+            </Link>
+            <Link
+              href="/problem-list"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+            >
+              Problem List
             </Link>
 
             {/* Admin-only navigation */}
@@ -182,13 +200,15 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg hover:scale-105 transition-all"
-              >
-                <LogIn className="w-4 h-4" />
-                Login
-              </Link>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
+              </motion.div>
             )}
           </div>
 

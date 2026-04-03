@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { useProfileStore, useAuthStore } from "@/stores";
 
 interface DifficultyProgressProps {
@@ -27,15 +28,17 @@ function DifficultyProgress({
         </span>
       </div>
       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full rounded-full ${
             label === "Easy"
               ? "bg-green-500"
               : label === "Medium"
                 ? "bg-yellow-500"
                 : "bg-red-500"
           }`}
-          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>
@@ -132,34 +135,27 @@ export default function LeetCodeStats() {
       <div className="p-4">
         {/* Main Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-              {totalSolved}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Problems Solved
-            </p>
-          </div>
-          <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <p className="text-2xl font-bold text-orange-500">🔥 {streak}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Day Streak
-            </p>
-          </div>
-          <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <p className="text-2xl font-bold text-green-500">
-              {acceptanceRate}%
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Acceptance
-            </p>
-          </div>
-          <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <p className="text-2xl font-bold text-indigo-500">
-              #{ranking.toLocaleString()}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Ranking</p>
-          </div>
+          {[
+            { label: "Problems Solved", value: totalSolved, color: "text-gray-800 dark:text-gray-200" },
+            { label: "Day Streak", value: `🔥 ${streak}`, color: "text-orange-500" },
+            { label: "Acceptance", value: `${acceptanceRate}%`, color: "text-green-500" },
+            { label: "Ranking", value: `#${ranking.toLocaleString()}`, color: "text-indigo-500" },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700/50"
+            >
+              <p className={`text-2xl font-bold ${stat.color}`}>
+                {stat.value}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {stat.label}
+              </p>
+            </motion.div>
+          ))}
         </div>
 
         {/* Difficulty Breakdown */}
