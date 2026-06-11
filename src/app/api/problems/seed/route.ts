@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { Problem } from "@/lib/db/models";
 import { problemsData } from "./problemsData";
+import { requireAdmin } from "@/lib/auth";
 
 // POST /api/problems/seed - Seed database with all problems
-export async function POST() {
+// SECURITY: Admin-only — this is a destructive operation that wipes all problems
+export async function POST(request: NextRequest) {
   try {
+    // Require admin authentication
+    const authResult = requireAdmin(request);
+    if (authResult instanceof NextResponse) return authResult;
+
     await dbConnect();
 
     // Clear existing problems and re-insert fresh

@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { User } from "@/lib/db/models";
+import { requireAuth } from "@/lib/auth";
 
-// GET /api/auth/me?userId=xxx - Get current user data
+// GET /api/auth/me - Get current authenticated user's data
+// SECURITY: Now uses server-side session cookie instead of accepting userId from query
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "User ID is required" },
-        { status: 400 },
-      );
-    }
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
 
     await dbConnect();
 
-    const user = await User.findById(userId);
+    const user = await User.findById(authResult.userId);
 
     if (!user) {
       return NextResponse.json(

@@ -22,10 +22,10 @@ export default function ConnectLeetCode({
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!input.trim() || !currentUser?.id) return;
+    if (!input.trim() || !currentUser) return;
 
     try {
-      await connectLeetCode(currentUser.id, input.trim());
+      await connectLeetCode(input.trim());
       setInput("");
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);

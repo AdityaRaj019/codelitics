@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { PlatformStats, UserProblemProgress } from "@/lib/db/models";
+import { requireAuth } from "@/lib/auth";
+import { isValidObjectId } from "@/lib/validation";
 
 // GET /api/users/[id]/stats - Get aggregated stats for a user
 export async function GET(
@@ -8,7 +10,32 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id: userId } = await params;
+    const { id: requestedUserId } = await params;
+
+    // Validate ObjectId format
+    if (!isValidObjectId(requestedUserId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid user ID format" },
+        { status: 400 },
+      );
+    }
+
+    // SECURITY: Authenticate and verify the user is accessing their own stats
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+
+    // Users can only access their own stats (admins can access any)
+    if (
+      authResult.userId !== requestedUserId &&
+      authResult.role !== "admin"
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 },
+      );
+    }
+
+    const userId = requestedUserId;
 
     await dbConnect();
 

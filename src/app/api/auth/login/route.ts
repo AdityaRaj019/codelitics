@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { User } from "@/lib/db/models";
 import bcrypt from "bcryptjs";
+import { setSessionCookie } from "@/lib/auth";
 
 // POST /api/auth/login - Login user with credentials
 export async function POST(request: NextRequest) {
@@ -61,7 +62,11 @@ export async function POST(request: NextRequest) {
       createdAt: user.createdAt,
     };
 
-    return NextResponse.json({ success: true, user: userResponse });
+    // Create response with session cookie
+    const response = NextResponse.json({ success: true, user: userResponse });
+    setSessionCookie(response, user._id.toString(), user.role);
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

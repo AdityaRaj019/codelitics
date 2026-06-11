@@ -1,10 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import mongoose from "mongoose";
+import { requireAdmin } from "@/lib/auth";
 
-// GET /api/test-db - Test database read/write operations
-export async function GET() {
+// GET /api/test-db - Test database read operations
+// SECURITY: Admin-only — exposes internal database information
+export async function GET(request: NextRequest) {
   try {
+    // Require admin authentication
+    const authResult = requireAdmin(request);
+    if (authResult instanceof NextResponse) return authResult;
+
+    // Only allow in development
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { success: false, error: "Not available in production" },
+        { status: 403 },
+      );
+    }
+
     await dbConnect();
 
     // Get database stats
@@ -49,8 +63,21 @@ export async function GET() {
 }
 
 // POST /api/test-db - Test inserting a document
-export async function POST() {
+// SECURITY: Admin-only + dev-only
+export async function POST(request: NextRequest) {
   try {
+    // Require admin authentication
+    const authResult = requireAdmin(request);
+    if (authResult instanceof NextResponse) return authResult;
+
+    // Only allow in development
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { success: false, error: "Not available in production" },
+        { status: 403 },
+      );
+    }
+
     await dbConnect();
 
     const db = mongoose.connection.db;

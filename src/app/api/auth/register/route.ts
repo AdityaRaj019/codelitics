@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { User } from "@/lib/db/models";
 import bcrypt from "bcryptjs";
+import { setSessionCookie } from "@/lib/auth";
+import { isValidEmail, isValidPassword, sanitizeString } from "@/lib/validation";
 
 // POST /api/auth/register - Register a new user
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const { name, email, password, role } = await request.json();
+    const body = await request.json();
+    const { name, email, password } = body;
+    // SECURITY: Never accept 'role' from the request body.
+    // All new users are created as "user" role.
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -18,19 +23,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate and sanitize name
+    const sanitizedName = sanitizeString(name);
+    if (sanitizedName.length < 1 || sanitizedName.length > 100) {
+      return NextResponse.json(
+        { success: false, error: "Name must be between 1 and 100 characters" },
+        { status: 400 },
+      );
+    }
+
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         { success: false, error: "Invalid email format" },
         { status: 400 },
       );
     }
 
-    // Validate password length
-    if (password.length < 6) {
+    // Validate password strength
+    const passwordCheck = isValidPassword(password);
+    if (!passwordCheck.valid) {
       return NextResponse.json(
-        { success: false, error: "Password must be at least 6 characters" },
+        { success: false, error: passwordCheck.error },
         { status: 400 },
       );
     }
@@ -47,16 +61,16 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // Create user — always as "user" role
     const user = await User.create({
-      name: name.trim(),
+      name: sanitizedName,
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       authProvider: "credentials",
-      role: role === "admin" ? "admin" : "user",
+      role: "user", // SECURITY: Hardcoded, never from request
     });
 
-    // Return user without password
+    // Build user response (without password)
     const userResponse = {
       id: user._id.toString(),
       name: user.name,
@@ -67,10 +81,14 @@ export async function POST(request: NextRequest) {
       createdAt: user.createdAt,
     };
 
-    return NextResponse.json(
+    // Create response with session cookie
+    const response = NextResponse.json(
       { success: true, user: userResponse },
       { status: 201 },
     );
+    setSessionCookie(response, user._id.toString(), user.role);
+
+    return response;
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

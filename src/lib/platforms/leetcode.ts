@@ -153,15 +153,3 @@ export function calculateAcceptanceRate(profile: LeetCodeProfile): number {
 
   return Math.round((acceptedStats.submissions / allStats.submissions) * 100);
 }
-
-/**
- * Format timestamp to readable date
- */
-export function formatTimestamp(timestamp: string): string {
-  const date = new Date(parseInt(timestamp) * 1000);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}

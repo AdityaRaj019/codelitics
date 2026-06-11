@@ -33,10 +33,10 @@ export default function ProblemsPage() {
 
   // Fetch problems when user is available
   useEffect(() => {
-    if (currentUser?.id) {
-      fetchProblems(currentUser.id);
+    if (isAuthenticated) {
+      fetchProblems();
     }
-  }, [currentUser?.id, fetchProblems]);
+  }, [isAuthenticated, fetchProblems]);
 
   const handleAddProblem = async () => {
     if (!title.trim() || !link.trim()) {
@@ -44,14 +44,14 @@ export default function ProblemsPage() {
       return;
     }
 
-    if (!currentUser?.id) {
+    if (!isAuthenticated) {
       alert("Please login to add problems");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await addProblem(currentUser.id, {
+      await addProblem({
         title: title.trim(),
         url: link.trim(),
         category,
@@ -70,18 +70,18 @@ export default function ProblemsPage() {
   };
 
   const handleToggleSolved = async (problemId: string) => {
-    if (!currentUser?.id) return;
+    if (!isAuthenticated) return;
     try {
-      await toggleSolved(currentUser.id, problemId);
+      await toggleSolved(problemId);
     } catch (error) {
       console.error("Failed to toggle problem:", error);
     }
   };
 
   const handleDeleteProblem = async (problemId: string) => {
-    if (!currentUser?.id) return;
+    if (!isAuthenticated) return;
     try {
-      await deleteProblem(currentUser.id, problemId);
+      await deleteProblem(problemId);
     } catch (error) {
       console.error("Failed to delete problem:", error);
     }

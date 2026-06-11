@@ -18,9 +18,9 @@ export default function ProblemList() {
   };
 
   const handleToggleSolved = async (problemId: string) => {
-    if (!currentUser?.id) return;
+    if (!currentUser) return;
     try {
-      await toggleSolved(currentUser.id, problemId);
+      await toggleSolved(problemId);
     } catch (error) {
       console.error("Failed to toggle problem status:", error);
     }

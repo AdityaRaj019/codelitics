@@ -26,12 +26,11 @@ interface AuthState {
     email: string,
     password: string,
   ) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (
     email: string,
     password: string,
     name: string,
-    role?: UserRole,
   ) => Promise<{ success: boolean; error?: string }>;
 
   // Session management
@@ -68,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: data.error };
           }
 
-          // Store user in state
+          // Store user in state (session cookie is set by the server)
           set({
             currentUser: data.user,
             isAuthenticated: true,
@@ -85,7 +84,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
+        try {
+          // Clear the server-side session cookie
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch (error) {
+          console.error("Logout API call failed:", error);
+        }
+        // Always clear client state regardless of API result
         set({
           currentUser: null,
           isAuthenticated: false,
@@ -93,11 +99,11 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
+      // SECURITY: Role is never accepted from client — always assigned by server
       register: async (
         email: string,
         password: string,
         name: string,
-        role: UserRole = "user",
       ) => {
         set({ isLoading: true, error: null });
 
@@ -105,7 +111,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await fetch("/api/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, name, role }),
+            body: JSON.stringify({ email, password, name }),
           });
 
           const data = await response.json();
@@ -115,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: data.error };
           }
 
-          // Auto-login after registration
+          // Auto-login after registration (session cookie set by server)
           set({
             currentUser: data.user,
             isAuthenticated: true,
@@ -137,13 +143,14 @@ export const useAuthStore = create<AuthState>()(
         if (!currentUser?.id) return;
 
         try {
-          const response = await fetch(`/api/auth/me?userId=${currentUser.id}`);
+          // Session cookie is sent automatically by the browser
+          const response = await fetch("/api/auth/me");
           const data = await response.json();
 
           if (data.success) {
             set({ currentUser: data.user, isAuthenticated: true });
           } else {
-            // User not found in database, clear session
+            // User not found or session expired, clear client state
             set({ currentUser: null, isAuthenticated: false });
           }
         } catch (error) {
@@ -169,10 +176,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-      version: 3, // Increment to trigger migration from old schema
+      version: 4, // Incremented to trigger migration from old schema
       migrate: (persistedState: unknown, version: number) => {
-        if (version < 3) {
-          // Clear old local-only auth data
+        if (version < 4) {
+          // Clear old auth data to use new cookie-based auth
           return {
             currentUser: null,
             isAuthenticated: false,
