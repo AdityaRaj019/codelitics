@@ -71,9 +71,9 @@ export default function LeetCodeStats() {
   const ranking = getRanking();
 
   const handleRefresh = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser) return;
     try {
-      await refreshLeetCode(currentUser.id);
+      await refreshLeetCode();
     } catch (error) {
       console.error("Failed to refresh LeetCode data:", error);
     }

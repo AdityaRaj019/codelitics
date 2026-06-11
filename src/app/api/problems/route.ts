@@ -1,46 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { Problem, UserProblemProgress } from "@/lib/db/models";
+import { requireAuth } from "@/lib/auth";
+import {
+  isValidObjectId,
+  sanitizeString,
+  sanitizeNotes,
+  sanitizeUrl,
+} from "@/lib/validation";
 
 // POST /api/problems - Add a new problem (and optionally mark as solved)
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
+
     await dbConnect();
 
-    const {
-      userId,
-      title,
-      url,
-      category,
-      difficulty,
-      platform,
-      status,
-      notes,
-    } = await request.json();
+    const { title, url, category, difficulty, platform, status, notes } =
+      await request.json();
 
     // Validate required fields
-    if (!userId || !title || !url || !category || !difficulty) {
+    if (!title || !url || !category || !difficulty) {
       return NextResponse.json(
         {
           success: false,
-          error: "userId, title, url, category, and difficulty are required",
+          error: "title, url, category, and difficulty are required",
         },
+        { status: 400 },
+      );
+    }
+
+    // Sanitize inputs
+    const sanitizedTitle = sanitizeString(title);
+    const sanitizedCategory = sanitizeString(category);
+    const sanitizedUrl = sanitizeUrl(url);
+    const sanitizedNotes = notes ? sanitizeNotes(notes) : undefined;
+
+    if (!sanitizedUrl) {
+      return NextResponse.json(
+        { success: false, error: "Invalid URL format" },
         { status: 400 },
       );
     }
 
     // Check if problem already exists (by title and platform)
     let problem = await Problem.findOne({
-      title: title.trim(),
+      title: sanitizedTitle,
       platform: platform || "LeetCode",
     });
 
     // If problem doesn't exist, create it
     if (!problem) {
       problem = await Problem.create({
-        title: title.trim(),
-        url: url.trim(),
-        category: category.trim(),
+        title: sanitizedTitle,
+        url: sanitizedUrl,
+        category: sanitizedCategory,
         difficulty,
         platform: platform || "LeetCode",
       });
@@ -51,7 +68,7 @@ export async function POST(request: NextRequest) {
       userId,
       problemId: problem._id,
       status: status || "solved",
-      notes: notes || undefined,
+      notes: sanitizedNotes,
     };
 
     const progress = await UserProblemProgress.findOneAndUpdate(
@@ -91,23 +108,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/problems?userId=xxx - Get all problems for a user with their progress
+// GET /api/problems - Get all problems for the authenticated user with their progress
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const status = searchParams.get("status"); // Optional filter: solved, attempted, bookmarked
     const difficulty = searchParams.get("difficulty"); // Optional filter
     const platform = searchParams.get("platform"); // Optional filter
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const skip = parseInt(searchParams.get("skip") || "0");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "User ID is required" },
-        { status: 400 },
-      );
-    }
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100); // Cap at 100
+    const skip = Math.max(parseInt(searchParams.get("skip") || "0"), 0);
 
     await dbConnect();
 

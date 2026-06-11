@@ -49,11 +49,11 @@ interface ProfileState {
   isLoading: boolean;
   error: string | null;
 
-  // Actions
-  connectLeetCode: (userId: string, usernameOrUrl: string) => Promise<void>;
-  refreshLeetCode: (userId: string) => Promise<void>;
-  fetchLeetCode: (userId: string) => Promise<void>;
-  disconnectLeetCode: (userId: string) => Promise<void>;
+  // Actions (userId removed — server derives it from session cookie)
+  connectLeetCode: (usernameOrUrl: string) => Promise<void>;
+  refreshLeetCode: () => Promise<void>;
+  fetchLeetCode: () => Promise<void>;
+  disconnectLeetCode: () => Promise<void>;
   clearError: () => void;
 
   // Computed getters
@@ -90,15 +90,15 @@ export const useProfileStore = create<ProfileState>()(
       isLoading: false,
       error: null,
 
-      // Connect LeetCode account - calls backend API which fetches from LeetCode
-      connectLeetCode: async (userId: string, usernameOrUrl: string) => {
+      // Connect LeetCode account — session cookie provides user identity
+      connectLeetCode: async (usernameOrUrl: string) => {
         set({ isLoading: true, error: null });
 
         try {
           const response = await fetch("/api/platforms/leetcode/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, username: usernameOrUrl }),
+            body: JSON.stringify({ username: usernameOrUrl }),
           });
 
           const data = await response.json();
@@ -123,8 +123,8 @@ export const useProfileStore = create<ProfileState>()(
         }
       },
 
-      // Refresh data from backend (which will re-fetch from LeetCode API)
-      refreshLeetCode: async (userId: string) => {
+      // Refresh data from backend (session cookie provides user identity)
+      refreshLeetCode: async () => {
         const { leetcode } = get();
         if (!leetcode?.username) {
           set({ error: "No LeetCode account connected" });
@@ -137,7 +137,7 @@ export const useProfileStore = create<ProfileState>()(
           const response = await fetch("/api/platforms/leetcode/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, username: leetcode.username }),
+            body: JSON.stringify({ username: leetcode.username }),
           });
 
           const data = await response.json();
@@ -161,14 +161,12 @@ export const useProfileStore = create<ProfileState>()(
         }
       },
 
-      // Fetch existing data from database (no LeetCode API call)
-      fetchLeetCode: async (userId: string) => {
+      // Fetch existing data from database (session cookie provides user identity)
+      fetchLeetCode: async () => {
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(
-            `/api/platforms/leetcode/sync?userId=${userId}`,
-          );
+          const response = await fetch("/api/platforms/leetcode/sync");
           const data = await response.json();
 
           if (data.success) {
@@ -188,9 +186,9 @@ export const useProfileStore = create<ProfileState>()(
         }
       },
 
-      disconnectLeetCode: async (userId: string) => {
+      disconnectLeetCode: async () => {
         try {
-          await fetch(`/api/platforms/leetcode/sync?userId=${userId}`, {
+          await fetch("/api/platforms/leetcode/sync", {
             method: "DELETE",
           });
           set({ leetcode: null, error: null });
@@ -271,10 +269,10 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 2, // Increment to migrate from old schema
+      version: 3, // Incremented to migrate from old schema
       migrate: (persistedState: unknown, version: number) => {
-        if (version < 2) {
-          // Clear old profile data to use new backend-synced format
+        if (version < 3) {
+          // Clear old profile data to use new cookie-based format
           return {
             leetcode: null,
             isLoading: false,

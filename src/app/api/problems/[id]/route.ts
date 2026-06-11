@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import { Problem, UserProblemProgress } from "@/lib/db/models";
+import { requireAuth } from "@/lib/auth";
+import { isValidObjectId, sanitizeNotes } from "@/lib/validation";
 
 // GET /api/problems/[id] - Get a specific problem with user progress
 export async function GET(
@@ -9,8 +11,19 @@ export async function GET(
 ) {
   try {
     const { id: problemId } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+
+    // Validate ObjectId format
+    if (!isValidObjectId(problemId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid problem ID format" },
+        { status: 400 },
+      );
+    }
+
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
 
     await dbConnect();
 
@@ -24,19 +37,17 @@ export async function GET(
     }
 
     let progress = null;
-    if (userId) {
-      const userProgress = await UserProblemProgress.findOne({
-        userId,
-        problemId,
-      });
-      if (userProgress) {
-        progress = {
-          id: userProgress._id.toString(),
-          status: userProgress.status,
-          notes: userProgress.notes,
-          updatedAt: userProgress.updatedAt,
-        };
-      }
+    const userProgress = await UserProblemProgress.findOne({
+      userId,
+      problemId,
+    });
+    if (userProgress) {
+      progress = {
+        id: userProgress._id.toString(),
+        status: userProgress.status,
+        notes: userProgress.notes,
+        updatedAt: userProgress.updatedAt,
+      };
     }
 
     const response = {
@@ -67,14 +78,21 @@ export async function PATCH(
 ) {
   try {
     const { id: problemId } = await params;
-    const { userId, status, notes } = await request.json();
 
-    if (!userId) {
+    // Validate ObjectId format
+    if (!isValidObjectId(problemId)) {
       return NextResponse.json(
-        { success: false, error: "User ID is required" },
+        { success: false, error: "Invalid problem ID format" },
         { status: 400 },
       );
     }
+
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
+
+    const { status, notes } = await request.json();
 
     await dbConnect();
 
@@ -90,7 +108,7 @@ export async function PATCH(
     // Update or create progress
     const updateData: { status?: string; notes?: string } = {};
     if (status) updateData.status = status;
-    if (notes !== undefined) updateData.notes = notes;
+    if (notes !== undefined) updateData.notes = sanitizeNotes(notes);
 
     const progress = await UserProblemProgress.findOneAndUpdate(
       { userId, problemId },
@@ -132,15 +150,19 @@ export async function DELETE(
 ) {
   try {
     const { id: problemId } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
 
-    if (!userId) {
+    // Validate ObjectId format
+    if (!isValidObjectId(problemId)) {
       return NextResponse.json(
-        { success: false, error: "User ID is required" },
+        { success: false, error: "Invalid problem ID format" },
         { status: 400 },
       );
     }
+
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
 
     await dbConnect();
 

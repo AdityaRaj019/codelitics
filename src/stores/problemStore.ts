@@ -36,33 +36,26 @@ interface ProblemState {
     hasMore: boolean;
   };
 
-  // Actions - API calls
-  fetchProblems: (
-    userId: string,
-    filters?: {
-      status?: string;
-      difficulty?: string;
-      platform?: string;
-      limit?: number;
-      skip?: number;
-    },
-  ) => Promise<void>;
+  // Actions — userId removed; server uses session cookie
+  fetchProblems: (filters?: {
+    status?: string;
+    difficulty?: string;
+    platform?: string;
+    limit?: number;
+    skip?: number;
+  }) => Promise<void>;
 
-  addProblem: (
-    userId: string,
-    problem: {
-      title: string;
-      url: string;
-      category: string;
-      difficulty: string;
-      platform?: string;
-      status?: string;
-      notes?: string;
-    },
-  ) => Promise<void>;
+  addProblem: (problem: {
+    title: string;
+    url: string;
+    category: string;
+    difficulty: string;
+    platform?: string;
+    status?: string;
+    notes?: string;
+  }) => Promise<void>;
 
   updateProblem: (
-    userId: string,
     problemId: string,
     updates: {
       status?: string;
@@ -70,9 +63,9 @@ interface ProblemState {
     },
   ) => Promise<void>;
 
-  deleteProblem: (userId: string, problemId: string) => Promise<void>;
+  deleteProblem: (problemId: string) => Promise<void>;
 
-  toggleSolved: (userId: string, problemId: string) => Promise<void>;
+  toggleSolved: (problemId: string) => Promise<void>;
 
   // Local getters
   getSolvedProblems: () => Problem[];
@@ -94,11 +87,11 @@ export const useProblemStore = create<ProblemState>()(
         hasMore: false,
       },
 
-      fetchProblems: async (userId, filters = {}) => {
+      fetchProblems: async (filters = {}) => {
         set({ isLoading: true, error: null });
 
         try {
-          const params = new URLSearchParams({ userId });
+          const params = new URLSearchParams();
           if (filters.status) params.append("status", filters.status);
           if (filters.difficulty)
             params.append("difficulty", filters.difficulty);
@@ -106,7 +99,10 @@ export const useProblemStore = create<ProblemState>()(
           if (filters.limit) params.append("limit", filters.limit.toString());
           if (filters.skip) params.append("skip", filters.skip.toString());
 
-          const response = await fetch(`/api/problems?${params}`);
+          const queryStr = params.toString();
+          const response = await fetch(
+            `/api/problems${queryStr ? `?${queryStr}` : ""}`,
+          );
           const data = await response.json();
 
           if (!data.success) {
@@ -129,14 +125,14 @@ export const useProblemStore = create<ProblemState>()(
         }
       },
 
-      addProblem: async (userId, problem) => {
+      addProblem: async (problem) => {
         set({ isLoading: true, error: null });
 
         try {
           const response = await fetch("/api/problems", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, ...problem }),
+            body: JSON.stringify(problem),
           });
 
           const data = await response.json();
@@ -185,12 +181,12 @@ export const useProblemStore = create<ProblemState>()(
         }
       },
 
-      updateProblem: async (userId, problemId, updates) => {
+      updateProblem: async (problemId, updates) => {
         try {
           const response = await fetch(`/api/problems/${problemId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, ...updates }),
+            body: JSON.stringify(updates),
           });
 
           const data = await response.json();
@@ -234,12 +230,11 @@ export const useProblemStore = create<ProblemState>()(
         }
       },
 
-      deleteProblem: async (userId, problemId) => {
+      deleteProblem: async (problemId) => {
         try {
-          const response = await fetch(
-            `/api/problems/${problemId}?userId=${userId}`,
-            { method: "DELETE" },
-          );
+          const response = await fetch(`/api/problems/${problemId}`, {
+            method: "DELETE",
+          });
 
           const data = await response.json();
 
@@ -262,12 +257,12 @@ export const useProblemStore = create<ProblemState>()(
         }
       },
 
-      toggleSolved: async (userId, problemId) => {
+      toggleSolved: async (problemId) => {
         const problem = get().problems.find((p) => p.id === problemId);
         if (!problem) return;
 
         const newStatus = problem.status === "solved" ? "attempted" : "solved";
-        await get().updateProblem(userId, problemId, { status: newStatus });
+        await get().updateProblem(problemId, { status: newStatus });
       },
 
       getSolvedProblems: () => get().problems.filter((p) => p.solved),
@@ -290,9 +285,9 @@ export const useProblemStore = create<ProblemState>()(
     }),
     {
       name: "problems-storage",
-      version: 2, // Increment to migrate from old schema
+      version: 3, // Incremented to migrate from old schema
       migrate: (persistedState: unknown, version: number) => {
-        if (version < 2) {
+        if (version < 3) {
           return {
             problems: [],
             isLoading: false,

@@ -28,8 +28,8 @@ export default function Header() {
   const router = useRouter();
   const { currentUser, isAuthenticated, logout, isAdmin } = useAuthStore();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 

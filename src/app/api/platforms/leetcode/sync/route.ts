@@ -7,24 +7,22 @@ import {
   calculateStreak,
   calculateAcceptanceRate,
 } from "@/lib/platforms";
+import { requireAuth } from "@/lib/auth";
 
-// POST /api/platforms/leetcode/sync - Sync LeetCode data for a user
-// This follows the workflow:
-// 1. Frontend triggers sync
-// 2. Backend route is hit
-// 3. Backend calls LeetCode API
-// 4. Backend transforms data
-// 5. Backend stores it in MongoDB
-// 6. Backend returns clean response
-// 7. Frontend updates state
+// POST /api/platforms/leetcode/sync - Sync LeetCode data for the authenticated user
 export async function POST(request: NextRequest) {
   try {
-    const { userId, username } = await request.json();
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
+
+    const { username } = await request.json();
 
     // Validate required fields
-    if (!userId || !username) {
+    if (!username) {
       return NextResponse.json(
-        { success: false, error: "User ID and username are required" },
+        { success: false, error: "LeetCode username is required" },
         { status: 400 },
       );
     }
@@ -32,11 +30,11 @@ export async function POST(request: NextRequest) {
     // Extract clean username
     const cleanUsername = extractLeetCodeUsername(username);
 
-    // Step 3: Call LeetCode API
+    // Call LeetCode API
     const { profile, userInfo } =
       await fetchCompleteLeetCodeData(cleanUsername);
 
-    // Step 4: Transform data
+    // Transform data
     const streak = calculateStreak(profile.submissionCalendar || {});
     const acceptanceRate = calculateAcceptanceRate(profile);
 
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
       lastSyncedAt: new Date(),
     };
 
-    // Step 5: Store in MongoDB (upsert)
+    // Store in MongoDB (upsert)
     await dbConnect();
 
     const platformStats = await PlatformStats.findOneAndUpdate(
@@ -88,7 +86,7 @@ export async function POST(request: NextRequest) {
       { upsert: true, new: true, runValidators: true },
     );
 
-    // Step 6: Return clean response for frontend
+    // Return clean response for frontend
     const response = {
       id: platformStats._id.toString(),
       userId: platformStats.userId.toString(),
@@ -131,18 +129,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/platforms/leetcode/sync?userId=xxx - Get stored LeetCode data
+// GET /api/platforms/leetcode/sync - Get stored LeetCode data for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "User ID is required" },
-        { status: 400 },
-      );
-    }
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
 
     await dbConnect();
 
@@ -189,18 +182,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE /api/platforms/leetcode/sync - Disconnect LeetCode account
+// DELETE /api/platforms/leetcode/sync - Disconnect LeetCode account for the authenticated user
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "User ID is required" },
-        { status: 400 },
-      );
-    }
+    // SECURITY: Authenticate via session cookie
+    const authResult = requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.userId;
 
     await dbConnect();
 
