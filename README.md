@@ -1,7 +1,6 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
   <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
 </p>
@@ -63,18 +62,16 @@
 ### Frontend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js** | 15.5 | React framework with App Router |
 | **React** | 19.1 | UI library |
-| **TypeScript** | 5.x | Type-safe development |
+| **JavaScript** | ES6+ | Programming language |
 | **Tailwind CSS** | 4.x | Utility-first styling |
 | **Zustand** | 5.x | State management |
 | **Lucide React** | Latest | Icon library |
-| **next-themes** | 0.4 | Theme management |
 
 ### Backend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js API Routes** | 15.5 | RESTful API endpoints |
+| **Node.js & Express** | - | RESTful API endpoints |
 | **MongoDB Atlas** | 7.x | Cloud database |
 | **Mongoose** | 9.x | MongoDB ODM |
 | **bcryptjs** | 3.x | Password hashing |
@@ -84,7 +81,6 @@
 |------------|---------|
 | **Vercel** | Deployment & Hosting |
 | **ESLint** | Code linting |
-| **Turbopack** | Fast bundling |
 | **Git** | Version control |
 
 ---
@@ -115,18 +111,18 @@
    cp .env.example .env.local
    ```
    
-   Update `.env.local` with your credentials:
-   ```env
-   # MongoDB Atlas Connection
-   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/codelitics
-   
-   # NextAuth Configuration
-   NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your-secret-key-here
-   
-   # LeetCode API
-   LEETCODE_API_BASE=https://alfa-leetcode-api.onrender.com
-   ```
+    Update `.env.local` with your credentials:
+    ```env
+    # MongoDB Atlas Connection
+    MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/codelitics
+    
+    # Auth Configuration
+    PORT=3000
+    JWT_SECRET=your-secret-key-here
+    
+    # LeetCode API
+    LEETCODE_API_BASE=https://alfa-leetcode-api.onrender.com
+    ```
 
 4. **Run the development server**
    ```bash
@@ -163,9 +159,9 @@ npm start
 |----------|--------|-------------|
 | `/api/problems` | GET | Get all problems for user |
 | `/api/problems` | POST | Add a new problem |
-| `/api/problems/[id]` | GET | Get problem by ID |
-| `/api/problems/[id]` | PATCH | Update problem |
-| `/api/problems/[id]` | DELETE | Delete problem |
+| `/api/problems/:id` | GET | Get problem by ID |
+| `/api/problems/:id` | PATCH | Update problem |
+| `/api/problems/:id` | DELETE | Delete problem |
 
 ### Platform Integration
 
@@ -189,51 +185,44 @@ npm start
 ```
 codelitics/
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── api/               # API Routes
-│   │   │   ├── auth/          # Authentication endpoints
-│   │   │   ├── problems/      # Problem CRUD endpoints
-│   │   │   ├── platforms/     # Platform integrations
-│   │   │   └── health/        # Health check endpoint
-│   │   ├── dashboard/         # Dashboard pages
-│   │   ├── login/            # Login page
-│   │   ├── register/         # Registration page
-│   │   ├── problems/         # Problems page
-│   │   ├── profile/          # Profile page
-│   │   └── page.tsx          # Home page
-│   │
 │   ├── components/            # React Components
 │   │   ├── ui/               # Base UI components
-│   │   ├── Header.tsx        # Navigation header
-│   │   ├── Footer.tsx        # Page footer
-│   │   ├── LeetCodeStats.tsx # LeetCode statistics display
-│   │   ├── ProblemList.tsx   # Problem list component
-│   │   ├── ConnectLeetCode.tsx
+│   │   ├── Header.js         # Navigation header
+│   │   ├── Footer.js         # Page footer
+│   │   ├── LeetCodeStats.js  # LeetCode statistics display
+│   │   ├── ProblemList.js    # Problem list component
+│   │   ├── ConnectLeetCode.js
 │   │   └── ...
 │   │
+│   ├── pages/                 # Page Components
+│   │   ├── Dashboard.js       # Dashboard pages
+│   │   ├── Login.js           # Login page
+│   │   ├── Register.js        # Registration page
+│   │   ├── Problems.js        # Problems page
+│   │   ├── Profile.js         # Profile page
+│   │   └── Home.js            # Home page
+│   │
 │   ├── stores/               # Zustand State Management
-│   │   ├── authStore.ts      # Authentication state
-│   │   ├── problemStore.ts   # Problems state
-│   │   ├── profileStore.ts   # User profile state
-│   │   └── index.ts          # Store exports
+│   │   ├── authStore.js      # Authentication state
+│   │   ├── problemStore.js   # Problems state
+│   │   ├── profileStore.js   # User profile state
+│   │   └── index.js          # Store exports
 │   │
 │   └── lib/                  # Utilities & Database
 │       └── db/
-│           ├── connect.ts    # MongoDB connection
+│           ├── connect.js    # MongoDB connection
 │           ├── models/       # Mongoose schemas
-│           │   ├── User.ts
-│           │   ├── Problem.ts
-│           │   ├── PlatformStats.ts
-│           │   └── UserProblemProgress.ts
-│           └── index.ts
+│           │   ├── User.js
+│           │   ├── Problem.js
+│           │   ├── PlatformStats.js
+│           │   └── UserProblemProgress.js
+│           └── index.js
 │
 ├── public/                   # Static assets
 ├── .env.example             # Environment template
 ├── .env.local               # Local environment (git-ignored)
 ├── package.json
-├── tailwind.config.ts
-├── tsconfig.json
-└── next.config.ts
+└── tailwind.config.js
 ```
 
 ---
@@ -259,8 +248,7 @@ codelitics/
    | Variable | Value |
    |----------|-------|
    | `MONGODB_URI` | Your MongoDB Atlas connection string |
-   | `NEXTAUTH_URL` | Your Vercel deployment URL |
-   | `NEXTAUTH_SECRET` | Generated secret key |
+   | `JWT_SECRET` | Generated secret key |
    | `LEETCODE_API_BASE` | `https://alfa-leetcode-api.onrender.com` |
 
 4. **Deploy**
@@ -279,7 +267,7 @@ codelitics/
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server with Turbopack |
+| `npm run dev` | Start development server |
 | `npm run build` | Build for production |
 | `npm start` | Start production server |
 | `npm run lint` | Run ESLint |
@@ -339,5 +327,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 </p>
 
 <p align="center">
-  Made with ❤️ using Next.js and TypeScript
+  Made with ❤️ using React and JavaScript
 </p>
