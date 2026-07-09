@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
     const userId = authResult.userId;
 
-    const { leetcodeUsername, gfgUsername } = await request.json();
+    const { leetcodeUsername, gfgUsername, leetcodeSlugs } = await request.json();
 
-    if (!leetcodeUsername && !gfgUsername) {
+    if (!leetcodeUsername && !gfgUsername && (!leetcodeSlugs || !Array.isArray(leetcodeSlugs))) {
       return NextResponse.json(
-        { success: false, error: "Provide at least one username (LeetCode or GFG)" },
+        { success: false, error: "Provide a username or list of solved slugs" },
         { status: 400 }
       );
     }
@@ -73,7 +73,27 @@ export async function POST(request: NextRequest) {
     let gfgSyncedCount = 0;
 
     // ────────────────────────────────────────────────────────
-    // 1. SYNC LEETCODE SOLVED PROBLEMS
+    // 0. SYNC DIRECT LEETCODE SLUGS (PASTED BY USER)
+    // ────────────────────────────────────────────────────────
+    if (leetcodeSlugs && Array.isArray(leetcodeSlugs)) {
+      for (const rawSlug of leetcodeSlugs) {
+        if (typeof rawSlug === "string") {
+          const slug = rawSlug.trim().toLowerCase();
+          const dbProb = dbProblemsBySlug.get(slug);
+          if (dbProb) {
+            await UserProblemProgress.findOneAndUpdate(
+              { userId, problemId: dbProb._id },
+              { status: "solved" },
+              { upsert: true, new: true }
+            );
+            leetcodeSyncedCount++;
+          }
+        }
+      }
+    }
+
+    // ────────────────────────────────────────────────────────
+    // 1. SYNC LEETCODE SOLVED PROBLEMS (RECENT)
     // ────────────────────────────────────────────────────────
     if (leetcodeUsername) {
       try {

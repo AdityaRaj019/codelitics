@@ -98,8 +98,73 @@ export default function UserDashboardPage() {
   const [lcUsernameInput, setLcUsernameInput] = useState("");
   const [gfgUsernameInput, setGfgUsernameInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [slugsText, setSlugsText] = useState("");
+
+  const handleImportSlugs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slugsText.trim()) {
+      setSyncError("Please paste your solved problem slugs.");
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncResult(null);
+    setSyncError(null);
+
+    try {
+      let parsedSlugs: string[] = [];
+      try {
+        const cleanedText = slugsText.trim();
+        if (cleanedText.startsWith("[") && cleanedText.endsWith("]")) {
+          parsedSlugs = JSON.parse(cleanedText);
+        } else {
+          parsedSlugs = cleanedText
+            .split(/[\s,]+/)
+            .map((s) => s.trim().replace(/^['"]|['"]$/g, ""))
+            .filter(Boolean);
+        }
+      } catch {
+        setSyncError("Invalid format. Please paste a valid JSON array or a list of slugs.");
+        setIsSyncing(false);
+        return;
+      }
+
+      if (parsedSlugs.length === 0) {
+        setSyncError("No slugs found in the input.");
+        setIsSyncing(false);
+        return;
+      }
+
+      const res = await fetch("/api/problems/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leetcodeSlugs: parsedSlugs,
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSyncResult(
+          `Successfully imported! Solved status updated for ${data.data.leetcodeSolvedImported} LeetCode problems.`
+        );
+        setSlugsText("");
+        await handleRefreshAll();
+        await fetchProblems();
+      } else {
+        setSyncError(data.error || "Failed to import solved problems.");
+      }
+    } catch (err) {
+      console.error("Import error:", err);
+      setSyncError("Failed to import solved problems. Please try again.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Fetch dbStats from /api/users/[id]/stats
   const fetchDbStats = async () => {
@@ -412,6 +477,76 @@ export default function UserDashboardPage() {
               )}
             </button>
           </form>
+
+          {/* Collapsible Advanced Import */}
+          <div className="mt-6 pt-6 border-t border-indigo-100 dark:border-gray-800">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 focus:outline-none"
+            >
+              {showAdvanced ? "Hide" : "Show"} Advanced: Import All 200+ Solved LeetCode Questions 🛠️
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-4 space-y-4 bg-white dark:bg-zinc-950 p-5 rounded-xl border border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                  LeetCode&apos;s public endpoints only expose your 20 most recent submissions. To import <strong>all</strong> 200+ of your solved problems at once:
+                </p>
+                <ol className="text-xs text-gray-600 dark:text-gray-400 list-decimal pl-4 space-y-1.5">
+                  <li>Open <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline font-semibold">leetcode.com</a> in a new tab and make sure you are logged in.</li>
+                  <li>Press <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 rounded text-[10px]">F12</kbd> (or right-click → Inspect) and open the <strong>Console</strong> tab.</li>
+                  <li>Copy and paste the code snippet below into the console, and hit <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 rounded text-[10px]">Enter</kbd>:</li>
+                </ol>
+
+                <pre className="p-3 bg-gray-50 dark:bg-zinc-905 border border-gray-150 dark:border-gray-800 rounded-lg text-[10px] text-gray-700 dark:text-gray-300 overflow-x-auto max-h-48 whitespace-pre font-mono">
+{`const solved = []; let skip = 0;
+(async () => {
+  while (true) {
+    const res = await fetch('https://leetcode.com/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: \`query ($limit: Int, $skip: Int) {
+          questionList(limit: $limit, skip: $skip, filters: { status: "AC" }) {
+            data { titleSlug }
+          }
+        }\`,
+        variables: { limit: 100, skip }
+      })
+    });
+    const { data } = await res.json();
+    const batch = data?.questionList?.data || [];
+    if (!batch.length) break;
+    solved.push(...batch.map(q => q.titleSlug));
+    skip += 100;
+  }
+  console.log(JSON.stringify(solved));
+})();`}
+                </pre>
+
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                  4. Paste the resulting JSON array (e.g., <code className="font-mono text-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 px-1 py-0.5 rounded text-[10px]">[&quot;two-sum&quot;, &quot;sort-colors&quot;]</code>) into the box below:
+                </p>
+
+                <form onSubmit={handleImportSlugs} className="space-y-3">
+                  <textarea
+                    value={slugsText}
+                    onChange={(e) => setSlugsText(e.target.value)}
+                    placeholder='Paste slugs here, e.g. ["two-sum", "sort-colors", "rotate-image"]'
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-xs font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSyncing}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 text-xs"
+                  >
+                    {isSyncing ? "Importing..." : "Import Solved Slugs"}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Overview Stats Bar */}
