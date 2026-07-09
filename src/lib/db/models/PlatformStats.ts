@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export type PlatformType = "leetcode" | "codeforces" | "codechef";
+export type PlatformType = "leetcode" | "codeforces" | "codechef" | "geeksforgeeks";
 
 export interface IPlatformStats extends Document {
   _id: mongoose.Types.ObjectId;
@@ -61,7 +61,7 @@ const PlatformStatsSchema = new Schema<IPlatformStats>(
     },
     platform: {
       type: String,
-      enum: ["leetcode", "codeforces", "codechef"],
+      enum: ["leetcode", "codeforces", "codechef", "geeksforgeeks"],
       required: [true, "Platform is required"],
     },
     username: {

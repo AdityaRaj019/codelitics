@@ -13,7 +13,6 @@ import {
   Award,
   BookOpen
 } from "lucide-react";
-import ConnectLeetCode from "@/components/ConnectLeetCode";
 import LeetCodeStats from "@/components/LeetCodeStats";
 import RecentLeetCodeSubmissions from "@/components/RecentLeetCodeSubmissions";
 import StatCard from "@/components/StatCard";
@@ -82,6 +81,7 @@ export default function UserDashboardPage() {
     leetcode,
     getTotalSolved,
     getStreak,
+    connectLeetCode,
     refreshLeetCode,
     fetchLeetCode,
     isLoading: profileLoading,
@@ -93,6 +93,13 @@ export default function UserDashboardPage() {
   // Database-driven platform statistics states
   const [dbStats, setDbStats] = useState<DBStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
+
+  // Sync state variables
+  const [lcUsernameInput, setLcUsernameInput] = useState("");
+  const [gfgUsernameInput, setGfgUsernameInput] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Fetch dbStats from /api/users/[id]/stats
   const fetchDbStats = async () => {
@@ -119,6 +126,17 @@ export default function UserDashboardPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Prefill input fields when platform data loads
+  useEffect(() => {
+    if (leetcode?.username) {
+      setLcUsernameInput(leetcode.username);
+    }
+    const gfgProfile = dbStats?.platforms?.find((p) => p.platform === "geeksforgeeks");
+    if (gfgProfile?.username) {
+      setGfgUsernameInput(gfgProfile.username);
+    }
+  }, [leetcode, dbStats]);
+
   useEffect(() => {
     if (isAuthenticated && currentUser?.id) {
       fetchProblems();
@@ -133,6 +151,52 @@ export default function UserDashboardPage() {
       await refreshLeetCode();
     }
     await fetchDbStats();
+  };
+
+  const handleSyncAll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lcUsernameInput.trim() && !gfgUsernameInput.trim()) {
+      setSyncError("Please enter at least one username.");
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncResult(null);
+    setSyncError(null);
+
+    try {
+      // 1. Connect LeetCode store if username is new
+      if (lcUsernameInput.trim() && lcUsernameInput.trim() !== leetcode?.username) {
+        await connectLeetCode(lcUsernameInput.trim());
+      }
+
+      // 2. Call bulk sync API
+      const res = await fetch("/api/problems/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leetcodeUsername: lcUsernameInput.trim() || undefined,
+          gfgUsername: gfgUsernameInput.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSyncResult(
+          `Successfully synced! Solved status updated for ${data.data.leetcodeSolvedImported} LeetCode problems and ${data.data.gfgSolvedImported} GeeksforGeeks problems.`
+        );
+        // Refresh stats
+        await handleRefreshAll();
+        await fetchProblems();
+      } else {
+        setSyncError(data.error || "Failed to sync solved problems.");
+      }
+    } catch (err) {
+      console.error("Sync error:", err);
+      setSyncError("Failed to sync solved problems. Please try again.");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // Show loading state during hydration
@@ -174,13 +238,17 @@ export default function UserDashboardPage() {
   const leetCodeSolved = isLeetCodeConnected ? getTotalSolved() : 0;
   const leetCodeStreak = isLeetCodeConnected ? getStreak() : 0;
 
+  const gfgStats = dbStats?.platforms?.find((p) => p.platform === "geeksforgeeks");
+  const isGfgConnected = !!gfgStats;
+  const gfgSolved = isGfgConnected ? gfgStats.totalSolved : 0;
+
   // Local tracker stats
   const localSolvedCount = problems.filter((p) => p.status === "solved").length;
   const localAttemptingCount = problems.filter((p) => p.status === "attempted").length;
   const localBookmarkedCount = problems.filter((p) => p.status === "bookmarked").length;
   
-  // Total solved overall (LeetCode + Local Solved)
-  const combinedTotalSolved = leetCodeSolved + localSolvedCount;
+  // Total solved overall (LeetCode + GFG + Local Solved)
+  const combinedTotalSolved = leetCodeSolved + gfgSolved + localSolvedCount;
   
   // Overview Stats Bar
   const statsOverview = [
@@ -273,12 +341,78 @@ export default function UserDashboardPage() {
           </button>
         </div>
 
-        {/* Connect LeetCode Box */}
-        {!isLeetCodeConnected && (
-          <div className="mb-8">
-            <ConnectLeetCode />
+        {/* Auto-Sync Panel */}
+        <div className="bg-gradient-to-br from-indigo-50/50 to-indigo-100/30 dark:from-zinc-900/50 dark:to-zinc-900 border border-indigo-100 dark:border-gray-800 rounded-2xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl">
+              🔄
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                Auto-Import Solved Questions
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Sync solved counts and automatically check off matching LeetCode and GeeksforGeeks problems in your checklist.
+              </p>
+            </div>
           </div>
-        )}
+
+          <form onSubmit={handleSyncAll} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  LeetCode Username
+                </label>
+                <input
+                  type="text"
+                  value={lcUsernameInput}
+                  onChange={(e) => setLcUsernameInput(e.target.value)}
+                  placeholder="e.g. lc_username"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  GeeksforGeeks Username
+                </label>
+                <input
+                  type="text"
+                  value={gfgUsernameInput}
+                  onChange={(e) => setGfgUsernameInput(e.target.value)}
+                  placeholder="e.g. gfg_username"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-zinc-955 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+                />
+              </div>
+            </div>
+
+            {syncResult && (
+              <div className="p-3.5 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl text-xs text-green-700 dark:text-green-300 font-medium">
+                {syncResult}
+              </div>
+            )}
+
+            {syncError && (
+              <div className="p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 font-medium">
+                {syncError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSyncing}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm"
+            >
+              {isSyncing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Syncing Solved Progress...</span>
+                </>
+              ) : (
+                <span>Sync Now</span>
+              )}
+            </button>
+          </form>
+        </div>
 
         {/* Overview Stats Bar */}
         <div className="mb-8">
@@ -363,22 +497,46 @@ export default function UserDashboardPage() {
                   </div>
                 </div>
 
-                {/* CodeChef */}
+                {/* GeeksforGeeks */}
                 <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl">👨‍🍳</span>
-                    <span className="text-xs font-bold px-2 py-0.5 bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 rounded-full">
-                      Inactive
+                    <span className="text-2xl">🟢</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      isGfgConnected 
+                        ? "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 border border-green-200" 
+                        : "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400"
+                    }`}>
+                      {isGfgConnected ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  <h4 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">CodeChef</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                    Synchronize your CodeChef profile, star rating, and solved logs.
-                  </p>
-                  <div className="flex justify-between items-center text-xs text-gray-400 border-t border-gray-100 dark:border-zinc-800 pt-3 mt-3">
-                    <span>Stars: N/A</span>
-                    <span>Rating: 0</span>
-                  </div>
+                  <h4 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">GeeksforGeeks</h4>
+                  {isGfgConnected ? (
+                    <div className="space-y-2 mt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Username:</span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">@{gfgStats.username}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Solved:</span>
+                        <span className="font-bold text-green-600">{gfgStats.totalSolved} problems</span>
+                      </div>
+                      <div className="flex justify-between text-xs pt-1 border-t border-gray-100 dark:border-zinc-800">
+                        <span>Easy: {gfgStats.easy || 0}</span>
+                        <span>Medium: {gfgStats.medium || 0}</span>
+                        <span>Hard: {gfgStats.hard || 0}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        Synchronize your GeeksforGeeks profile stats and solved checklists automatically.
+                      </p>
+                      <div className="flex justify-between items-center text-xs text-gray-400 border-t border-gray-100 dark:border-zinc-800 pt-3 mt-3">
+                        <span>Rank: N/A</span>
+                        <span>Solved: 0</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
               </div>
