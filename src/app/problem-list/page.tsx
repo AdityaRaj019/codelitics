@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, ChevronRight, ExternalLink, Search } from "lucide-react";
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  ExternalLink, 
+  Search, 
+  CheckCircle2, 
+  PlayCircle, 
+  Bookmark, 
+  Circle, 
+  Lock 
+} from "lucide-react";
+import { useAuthStore } from "@/stores";
 
 interface Problem {
   id: string;
@@ -10,6 +21,110 @@ interface Problem {
   category: string;
   difficulty: string;
   platform: string;
+  status?: "solved" | "attempted" | "bookmarked" | null;
+}
+
+interface StatusDropdownProps {
+  status: "solved" | "attempted" | "bookmarked" | null | undefined;
+  onStatusChange: (newStatus: "solved" | "attempted" | "bookmarked" | "none") => void;
+  isAuthenticated: boolean;
+}
+
+function StatusDropdown({ status, onStatusChange, isAuthenticated }: StatusDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center text-gray-400 dark:text-gray-600 gap-1 text-xs select-none">
+        <Lock className="w-3.5 h-3.5" />
+        <span>Login to track</span>
+      </div>
+    );
+  }
+
+  const statusConfig = {
+    solved: {
+      label: "Done",
+      color: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800",
+      icon: CheckCircle2,
+    },
+    attempted: {
+      label: "Attempting",
+      color: "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800",
+      icon: PlayCircle,
+    },
+    bookmarked: {
+      label: "Visited",
+      color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+      icon: Bookmark,
+    },
+    none: {
+      label: "Todo",
+      color: "text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900 border-gray-200 dark:border-gray-800",
+      icon: Circle,
+    },
+  };
+
+  const current = status ? statusConfig[status] : statusConfig.none;
+  const CurrentIcon = current.icon;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all ${current.color}`}
+      >
+        <CurrentIcon className="w-3.5 h-3.5" />
+        <span>{current.label}</span>
+        <ChevronDown className="w-3 h-3 opacity-60 ml-0.5" />
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop for closing */}
+          <div 
+            className="fixed inset-0 z-40 cursor-default" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+          />
+          {/* Menu */}
+          <div 
+            className="absolute right-0 mt-1.5 w-40 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(["none", "bookmarked", "attempted", "solved"] as const).map((key) => {
+              const cfg = statusConfig[key];
+              const Icon = cfg.icon;
+              const isSelected = (key === "none" && !status) || status === key;
+
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    onStatusChange(key);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-left font-medium transition-colors ${
+                    isSelected 
+                      ? "bg-gray-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400" 
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isSelected ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`} />
+                  {cfg.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 const categoryIcons: Record<string, string> = {
@@ -75,6 +190,7 @@ const difficultyConfig: Record<string, { color: string; bg: string; darkBg: stri
 };
 
 export default function ProblemListPage() {
+  const { isAuthenticated } = useAuthStore();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +198,46 @@ export default function ProblemListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
+  // Refetch problems when user logs in/out to update progress statuses
   useEffect(() => {
     fetchProblems();
-  }, []);
+  }, [isAuthenticated]);
+
+  const handleStatusChange = async (problemId: string, newStatus: "solved" | "attempted" | "bookmarked" | "none") => {
+    try {
+      if (newStatus === "none") {
+        // DELETE request resets progress/status
+        const res = await fetch(`/api/problems/${problemId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (data.success) {
+          setProblems((prev) =>
+            prev.map((p) => (p.id === problemId ? { ...p, status: null } : p))
+          );
+        } else {
+          console.error("Failed to delete progress:", data.error);
+        }
+      } else {
+        // PATCH request updates or inserts progress/status
+        const res = await fetch(`/api/problems/${problemId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setProblems((prev) =>
+            prev.map((p) => (p.id === problemId ? { ...p, status: newStatus } : p))
+          );
+        } else {
+          console.error("Failed to update status:", data.error);
+        }
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+    }
+  };
 
   const fetchProblems = async () => {
     try {
@@ -157,6 +310,12 @@ export default function ProblemListPage() {
   const mediumCount = filteredProblems.filter((p) => p.difficulty === "Medium").length;
   const hardCount = filteredProblems.filter((p) => p.difficulty === "Hard").length;
 
+  const userSolvedCount = problems.filter((p) => p.status === "solved").length;
+  const userAttemptedCount = problems.filter((p) => p.status === "attempted").length;
+  const userBookmarkedCount = problems.filter((p) => p.status === "bookmarked").length;
+  const totalProblemsCount = problems.length;
+  const completionPercentage = totalProblemsCount > 0 ? Math.round((userSolvedCount / totalProblemsCount) * 100) : 0;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
@@ -193,6 +352,36 @@ export default function ProblemListPage() {
             {totalCount} curated DSA problems across {sortedCategories.length} categories
           </p>
         </div>
+
+        {/* User Progress Dashboard */}
+        {isAuthenticated && (
+          <div className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-6 mb-8 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <span className="text-xl">📈</span>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Your Progress Dashboard</h2>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Keep coding! You have marked <span className="font-semibold text-green-600 dark:text-green-400">{userSolvedCount}</span> as Done, <span className="font-semibold text-orange-600 dark:text-orange-400">{userAttemptedCount}</span> as Attempting, and <span className="font-semibold text-blue-600 dark:text-blue-400">{userBookmarkedCount}</span> as Visited.
+                </p>
+                {/* Progress Bar */}
+                <div className="relative w-full h-3 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <div 
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-center bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-900 w-24 h-24 rounded-2xl flex-shrink-0 shadow-sm">
+                <div className="text-center">
+                  <span className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">{completionPercentage}%</span>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase mt-0.5">Completed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -329,10 +518,15 @@ export default function ProblemListPage() {
                                 <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                               </a>
                             </div>
-                            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                            <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${dc.color} ${dc.bg} ${dc.darkBg}`}>
                                 {problem.difficulty}
                               </span>
+                              <StatusDropdown
+                                status={problem.status}
+                                onStatusChange={(newStatus) => handleStatusChange(problem.id, newStatus)}
+                                isAuthenticated={isAuthenticated}
+                              />
                             </div>
                           </div>
                         );
