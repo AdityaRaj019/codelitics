@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
     const userId = authResult.userId;
 
-    const { leetcodeUsername, gfgUsername, leetcodeSlugs } = await request.json();
+    const { leetcodeUsername, gfgUsername, leetcodeSlugs, universalText } = await request.json();
 
-    if (!leetcodeUsername && !gfgUsername && (!leetcodeSlugs || !Array.isArray(leetcodeSlugs))) {
+    if (!leetcodeUsername && !gfgUsername && (!leetcodeSlugs || !Array.isArray(leetcodeSlugs)) && !universalText) {
       return NextResponse.json(
-        { success: false, error: "Provide a username or list of solved slugs" },
+        { success: false, error: "Provide a username, list of solved slugs, or text to import" },
         { status: 400 }
       );
     }
@@ -71,6 +71,40 @@ export async function POST(request: NextRequest) {
 
     let leetcodeSyncedCount = 0;
     let gfgSyncedCount = 0;
+
+    // ────────────────────────────────────────────────────────
+    // 00. SYNC VIA UNIVERSAL TEXT MATCHING (PASTED BY USER)
+    // ────────────────────────────────────────────────────────
+    if (universalText && typeof universalText === "string") {
+      const inputLines = universalText
+        .split(/[\n,\t"\[\]\)\(]+/)
+        .map(line => normalizeTitle(line.trim()))
+        .filter(line => line.length > 3);
+
+      for (const dbProb of allDbProblems) {
+        const dbNorm = normalizeTitle(dbProb.title);
+        
+        const isMatched = inputLines.some(line => {
+          if (line === dbNorm) return true;
+          if (dbNorm.includes(line) && line.length > 10) return true;
+          if (line.includes(dbNorm) && dbNorm.length > 8) return true;
+          return false;
+        });
+
+        if (isMatched) {
+          await UserProblemProgress.findOneAndUpdate(
+            { userId, problemId: dbProb._id },
+            { status: "solved" },
+            { upsert: true, new: true }
+          );
+          if (dbProb.platform === "LeetCode") {
+            leetcodeSyncedCount++;
+          } else {
+            gfgSyncedCount++;
+          }
+        }
+      }
+    }
 
     // ────────────────────────────────────────────────────────
     // 0. SYNC DIRECT LEETCODE SLUGS (PASTED BY USER)
@@ -145,67 +179,40 @@ export async function POST(request: NextRequest) {
     // ────────────────────────────────────────────────────────
     if (gfgUsername) {
       try {
-        const res = await fetch(`https://geeks-for-geeks-api.vercel.app/${gfgUsername}`);
-        if (res.ok) {
-          const data = await res.json();
-          const solvedStats = data.solvedStats || {};
-          
-          // Flatten all solved categories: school, basic, easy, medium, hard
-          const categories = ["school", "basic", "easy", "medium", "hard"];
-          const gfgSolvedProblems: { title: string; url: string }[] = [];
-          
-          categories.forEach((cat) => {
-            const list = solvedStats[cat]?.questions || [];
-            interface GfgQuestion {
-              question: string;
-              questionUrl?: string;
-            }
-            list.forEach((q: GfgQuestion) => {
-              if (q.question) {
-                gfgSolvedProblems.push({
-                  title: q.question,
-                  url: q.questionUrl || "",
-                });
-              }
-            });
-          });
-
-          // Match each solved GFG problem to our DB problems
-          for (const q of gfgSolvedProblems) {
-            const apiSlug = extractSlug(q.url);
-            const dbProb = (apiSlug ? dbProblemsBySlug.get(apiSlug) : null) || 
-                           dbProblemsByNormalizedTitle.get(normalizeTitle(q.title));
-            
-            if (dbProb) {
-              // Upsert solved user progress
-              await UserProblemProgress.findOneAndUpdate(
-                { userId, problemId: dbProb._id },
-                { status: "solved" },
-                { upsert: true, new: true }
-              );
-              gfgSyncedCount++;
-            }
+        const res = await fetch(`https://auth.geeksforgeeks.org/user/${gfgUsername}/`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
           }
+        });
+        if (res.ok) {
+          const html = await res.text();
+          
+          // Regex search for user stats in Next.js props
+          const totalMatch = html.match(/"total_problems_solved"\s*:\s*(\d+)/);
+          const scoreMatch = html.match(/"score"\s*:\s*(\d+)/);
+          const rankMatch = html.match(/"institute_rank"\s*:\s*(\d+)/);
+          
+          const totalSolved = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+          const rating = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
+          const ranking = rankMatch ? parseInt(rankMatch[1], 10) : 0;
 
           // Save GFG stats to PlatformStats so it renders on profile
-          const totalSolved = parseInt(data.info?.totalProblemsSolved || "0", 10) || gfgSolvedProblems.length;
-          
           const gfgStatsData = {
             userId,
             platform: "geeksforgeeks" as const,
             username: gfgUsername,
             totalSolved,
-            easy: (solvedStats.easy?.count || 0) + (solvedStats.basic?.count || 0) + (solvedStats.school?.count || 0),
-            medium: solvedStats.medium?.count || 0,
-            hard: solvedStats.hard?.count || 0,
-            rating: parseInt(data.info?.codingScore || "0", 10) || 0,
-            ranking: parseInt(data.info?.rank || "0", 10) || 0,
+            easy: 0,
+            medium: 0,
+            hard: 0,
+            rating,
+            ranking,
             acceptanceRate: 100, // Placeholder
             streak: 0,
             userInfo: {
-              name: data.info?.name || gfgUsername,
+              name: gfgUsername,
               avatar: "https://media.geeksforgeeks.org/gfg-gg-logo.svg",
-              country: data.info?.country || "India",
+              country: "India",
               skills: [],
             },
             lastSyncedAt: new Date(),

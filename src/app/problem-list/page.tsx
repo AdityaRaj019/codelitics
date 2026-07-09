@@ -86,7 +86,7 @@ function StatusDropdown({ status, onStatusChange, isAuthenticated }: StatusDropd
         <>
           {/* Backdrop for closing */}
           <div 
-            className="fixed inset-0 z-40 cursor-default" 
+            className="fixed inset-0 z-[998] cursor-default" 
             onClick={(e) => {
               e.stopPropagation();
               setIsOpen(false);
@@ -94,7 +94,7 @@ function StatusDropdown({ status, onStatusChange, isAuthenticated }: StatusDropd
           />
           {/* Menu */}
           <div 
-            className="absolute right-0 mt-1.5 w-40 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800"
+            className="absolute right-0 mt-1.5 w-40 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg z-[999] overflow-hidden divide-y divide-gray-100 dark:divide-gray-800"
             onClick={(e) => e.stopPropagation()}
           >
             {(["none", "bookmarked", "attempted", "solved"] as const).map((key) => {
@@ -465,7 +465,7 @@ export default function ProblemListPage() {
             return (
               <div
                 key={category}
-                className={`rounded-xl border overflow-hidden transition-all duration-200 ${colors.border} ${colors.darkBorder} ${colors.bg} ${colors.darkBg}`}
+                className={`rounded-xl border overflow-visible transition-all duration-200 ${colors.border} ${colors.darkBorder} ${colors.bg} ${colors.darkBg}`}
               >
                 {/* Category Header */}
                 <button
@@ -495,14 +495,17 @@ export default function ProblemListPage() {
 
                 {/* Problem List */}
                 {isExpanded && (
-                  <div className="bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-gray-800">
+                  <div className="bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-gray-800 rounded-b-xl">
                     <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
                       {catProblems.map((problem, idx) => {
                         const dc = difficultyConfig[problem.difficulty] || difficultyConfig.Easy;
+                        const isLast = idx === catProblems.length - 1;
                         return (
                           <div
                             key={problem.id}
-                            className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors group"
+                            className={`flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors group ${
+                              isLast ? "rounded-b-xl" : ""
+                            }`}
                           >
                             <div className="flex items-center gap-4 flex-1 min-w-0">
                               <span className="text-sm text-gray-400 dark:text-gray-600 w-8 text-right font-mono">
