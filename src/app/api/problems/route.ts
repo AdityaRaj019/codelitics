@@ -3,7 +3,6 @@ import dbConnect from "@/lib/db/connect";
 import { Problem, UserProblemProgress } from "@/lib/db/models";
 import { requireAuth } from "@/lib/auth";
 import {
-  isValidObjectId,
   sanitizeString,
   sanitizeNotes,
   sanitizeUrl,

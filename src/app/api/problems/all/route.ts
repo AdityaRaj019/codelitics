@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is authenticated to merge progress
     const authUser = getAuthenticatedUser(request);
-    let progressMap: Record<string, { status: string; notes?: string }> = {};
+    const progressMap: Record<string, { status: string; notes?: string }> = {};
     
     if (authUser) {
       const progressList = await UserProblemProgress.find({ userId: authUser.userId }).lean();
