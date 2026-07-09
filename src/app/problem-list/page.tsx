@@ -14,10 +14,22 @@ interface Problem {
 
 const categoryIcons: Record<string, string> = {
   Array: "📦",
+  Matrix: "🔢",
+  String: "🔤",
+  "Searching & Sorting": "🔎",
+  "Linked List": "🔗",
+  "Binary Trees": "🌳",
+  "Binary Search Trees": "🌲",
+  Greedy: "💰",
+  BackTracking: "🔙",
+  "Stacks & Queues": "📚",
+  Heap: "⛰️",
+  Graph: "🕸️",
+  Trie: "🔡",
   "Dynamic Programming": "🧩",
+  "Bit Manipulation": "⚡",
   Strings: "🔤",
   Maths: "🔢",
-  Greedy: "💰",
   DFS: "🌊",
   Tree: "🌳",
   "Hash Table": "🗂️",
@@ -25,18 +37,27 @@ const categoryIcons: Record<string, string> = {
   BFS: "🌐",
   "Two Pointer": "👆",
   Stack: "📚",
-  Graph: "🕸️",
-  "Linked List": "🔗",
-  Heap: "⛰️",
   "Sliding Window": "🪟",
 };
 
 const categoryColors: Record<string, { bg: string; border: string; text: string; darkBg: string; darkBorder: string; darkText: string }> = {
   Array: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", darkBg: "dark:bg-blue-950/40", darkBorder: "dark:border-blue-800", darkText: "dark:text-blue-300" },
+  Matrix: { bg: "bg-slate-50", border: "border-slate-200", text: "text-slate-700", darkBg: "dark:bg-slate-950/40", darkBorder: "dark:border-slate-800", darkText: "dark:text-slate-300" },
+  String: { bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700", darkBg: "dark:bg-cyan-950/40", darkBorder: "dark:border-cyan-800", darkText: "dark:text-cyan-300" },
+  "Searching & Sorting": { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", darkBg: "dark:bg-orange-950/40", darkBorder: "dark:border-orange-800", darkText: "dark:text-orange-300" },
+  "Linked List": { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", darkBg: "dark:bg-purple-950/40", darkBorder: "dark:border-purple-800", darkText: "dark:text-purple-300" },
+  "Binary Trees": { bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", darkBg: "dark:bg-teal-950/40", darkBorder: "dark:border-teal-800", darkText: "dark:text-teal-300" },
+  "Binary Search Trees": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", darkBg: "dark:bg-green-950/40", darkBorder: "dark:border-green-800", darkText: "dark:text-green-300" },
+  Greedy: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-950/40", darkBorder: "dark:border-emerald-800", darkText: "dark:text-emerald-300" },
+  BackTracking: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", darkBg: "dark:bg-amber-950/40", darkBorder: "dark:border-amber-800", darkText: "dark:text-amber-300" },
+  "Stacks & Queues": { bg: "bg-fuchsia-50", border: "border-fuchsia-200", text: "text-fuchsia-700", darkBg: "dark:bg-fuchsia-950/40", darkBorder: "dark:border-fuchsia-800", darkText: "dark:text-fuchsia-300" },
+  Heap: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", darkBg: "dark:bg-red-950/40", darkBorder: "dark:border-red-800", darkText: "dark:text-red-300" },
+  Graph: { bg: "bg-pink-50", border: "border-pink-200", text: "text-pink-700", darkBg: "dark:bg-pink-950/40", darkBorder: "dark:border-pink-800", darkText: "dark:text-pink-300" },
+  Trie: { bg: "bg-lime-50", border: "border-lime-200", text: "text-lime-700", darkBg: "dark:bg-lime-950/40", darkBorder: "dark:border-lime-800", darkText: "dark:text-lime-300" },
   "Dynamic Programming": { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", darkBg: "dark:bg-orange-950/40", darkBorder: "dark:border-orange-800", darkText: "dark:text-orange-300" },
+  "Bit Manipulation": { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", darkBg: "dark:bg-yellow-950/40", darkBorder: "dark:border-yellow-800", darkText: "dark:text-yellow-300" },
   Strings: { bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700", darkBg: "dark:bg-cyan-950/40", darkBorder: "dark:border-cyan-800", darkText: "dark:text-cyan-300" },
   Maths: { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700", darkBg: "dark:bg-violet-950/40", darkBorder: "dark:border-violet-800", darkText: "dark:text-violet-300" },
-  Greedy: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-950/40", darkBorder: "dark:border-emerald-800", darkText: "dark:text-emerald-300" },
   DFS: { bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", darkBg: "dark:bg-indigo-950/40", darkBorder: "dark:border-indigo-800", darkText: "dark:text-indigo-300" },
   Tree: { bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", darkBg: "dark:bg-teal-950/40", darkBorder: "dark:border-teal-800", darkText: "dark:text-teal-300" },
   "Hash Table": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", darkBg: "dark:bg-amber-950/40", darkBorder: "dark:border-amber-800", darkText: "dark:text-amber-300" },
@@ -44,9 +65,6 @@ const categoryColors: Record<string, { bg: string; border: string; text: string;
   BFS: { bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700", darkBg: "dark:bg-sky-950/40", darkBorder: "dark:border-sky-800", darkText: "dark:text-sky-300" },
   "Two Pointer": { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", darkBg: "dark:bg-rose-950/40", darkBorder: "dark:border-rose-800", darkText: "dark:text-rose-300" },
   Stack: { bg: "bg-fuchsia-50", border: "border-fuchsia-200", text: "text-fuchsia-700", darkBg: "dark:bg-fuchsia-950/40", darkBorder: "dark:border-fuchsia-800", darkText: "dark:text-fuchsia-300" },
-  Graph: { bg: "bg-pink-50", border: "border-pink-200", text: "text-pink-700", darkBg: "dark:bg-pink-950/40", darkBorder: "dark:border-pink-800", darkText: "dark:text-pink-300" },
-  "Linked List": { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", darkBg: "dark:bg-purple-950/40", darkBorder: "dark:border-purple-800", darkText: "dark:text-purple-300" },
-  Heap: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", darkBg: "dark:bg-red-950/40", darkBorder: "dark:border-red-800", darkText: "dark:text-red-300" },
   "Sliding Window": { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", darkBg: "dark:bg-yellow-950/40", darkBorder: "dark:border-yellow-800", darkText: "dark:text-yellow-300" },
 };
 
@@ -106,12 +124,21 @@ export default function ProblemListPage() {
   }, [filteredProblems]);
 
   const categoryOrder = [
-    "Array", "Dynamic Programming", "Strings", "Maths", "Greedy", "DFS",
-    "Tree", "Hash Table", "Binary Search", "BFS", "Two Pointer", "Stack",
-    "Graph", "Linked List", "Heap", "Sliding Window",
+    // DSA Sheet categories
+    "Array", "Matrix", "String", "Searching & Sorting", "Linked List",
+    "Binary Trees", "Binary Search Trees", "Greedy", "BackTracking",
+    "Stacks & Queues", "Heap", "Graph", "Trie", "Dynamic Programming",
+    "Bit Manipulation",
+    // LeetCode-specific categories
+    "Strings", "Maths", "DFS", "Tree", "Hash Table",
+    "Binary Search", "BFS", "Two Pointer", "Stack",
+    "Sliding Window",
   ];
 
-  const sortedCategories = categoryOrder.filter((c) => groupedProblems[c]);
+  const sortedCategories = [
+    ...categoryOrder.filter((c) => groupedProblems[c]),
+    ...Object.keys(groupedProblems).filter((c) => !categoryOrder.includes(c)),
+  ];
 
   const toggleCategory = (cat: string) => {
     setExpandedCategories((prev) => {
